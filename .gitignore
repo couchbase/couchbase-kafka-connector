@@ -1,0 +1,11 @@
+.#*
+build
+.gradle
+.idea/dictionaries
+.idea/gradle.xml
+.idea/libraries
+.idea/tasks.xml
+.idea/workspace.xml
+.idea/vcs.xml
+.idea/misc.xml
+.idea/findbugs-idea.xml

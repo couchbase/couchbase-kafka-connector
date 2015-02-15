@@ -1,0 +1,168 @@
+// -*- mode: groovy; -*-
+
+buildscript {
+    repositories {
+        jcenter()
+    }
+    dependencies {
+        classpath 'com.github.jengelman.gradle.plugins:shadow:1.2.0'
+    }
+}
+
+apply plugin: 'com.github.johnrengelman.shadow'
+apply plugin: 'java'
+apply plugin: 'idea'
+apply plugin: 'maven-publish'
+
+group = 'com.couchbase.client'
+description = 'Official Couchbase Kafka Connector'
+
+tasks.withType(JavaCompile) {
+    sourceCompatibility = "1.7"
+    targetCompatibility = "1.7"
+}
+
+idea {
+    module {
+        downloadJavadoc = true
+        downloadSources = true
+    }
+}
+
+def getVersionName() {
+    try {
+        def stdout = new ByteArrayOutputStream()
+        exec {
+            commandLine 'git', 'describe', '--always', '--dirty'
+            standardOutput = stdout
+        }
+        return stdout.toString().trim()
+    } catch (e) {
+        //in case git command is not accessible...
+        //put the date in there to have at least a reference point
+        return "unknown" + new Date().format("yyyyMMdd");
+    }
+}
+
+ext {
+    coreVersion = '1.1.0-dp'
+
+    slf4jVersion = '1.7.7'
+    hadoopVersion = '2.6.0'
+    kafkaVersion = '0.8.2.0'
+
+    clientVersion = '2.1.0'
+    junitVersion = '4.11'
+
+    gitVersion = getVersionName()
+}
+
+repositories {
+    mavenCentral()
+    maven { url { "http://files.couchbase.com/maven2" } }
+}
+
+dependencies {
+    compile(group: 'com.couchbase.client', name: 'core-io', version: coreVersion, changing: true)
+    compile(group: 'org.slf4j', name: 'slf4j-simple', version: slf4jVersion)
+    compile(group: 'org.apache.hadoop', name: 'hadoop-common', version: hadoopVersion)
+    compile(group: 'org.apache.hadoop', name: 'hadoop-hdfs', version: hadoopVersion)
+    compile(group: 'org.apache.kafka', name: 'kafka_2.10', version: kafkaVersion) {
+        exclude(module: 'jms')
+        exclude(module: 'jmxtools')
+        exclude(module: 'jmxri')
+    }
+    testCompile(group: 'com.couchbase.client', name: 'java-client', version: clientVersion)
+    testCompile(group: 'junit', name: 'junit', version: junitVersion)
+    testCompile(group: 'org.apache.kafka', name: 'kafka_2.10', version: kafkaVersion, classifier: 'test') {
+        exclude(module: 'jms')
+        exclude(module: 'jmxtools')
+        exclude(module: 'jmxri')
+    }
+}
+
+task sourcesJar(type: Jar) {
+    classifier = 'sources'
+    from sourceSets.main.allSource
+}
+
+task javadocJar(type: Jar) {
+    classifier = 'javadoc'
+    from javadoc
+}
+
+artifacts {
+    archives sourcesJar
+    archives javadocJar
+}
+
+def pomConfig = {
+    name 'Couchbase Kafka Connector'
+    url 'http://couchbase.com'
+    organization {
+        name 'Couchbase, Inc.'
+        url 'http://couchbase.com'
+    }
+    licenses {
+        license {
+            name 'The Apache Software License, Version 2.0'
+            url 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+            distribution 'repo'
+        }
+    }
+    scm {
+        url 'https://github.com/couchbase/couchbase-kafka-connector'
+        connection 'scm:git:git://github.com/couchbase/couchbase-kafka-connector'
+        developerConnection 'scm:git:git://github.com/couchbase/couchbase-kafka-connector'
+    }
+    issueManagement {
+        system "Couchbase JIRA"
+        url "http://www.couchbase.com/issues/browse/KAFKAC"
+    }
+    developers {
+        developer {
+            id 'avsej'
+            name 'Sergey Avseyev'
+            email 'sergey@couchbase.com'
+        }
+    }
+}
+
+publishing  {
+    publications {
+        compile(MavenPublication) {
+            from components.java
+            artifactId = 'kafka-connector'
+
+            artifact(javadocJar) {
+                classifier = 'javadoc'
+            }
+            artifact(sourcesJar) {
+                classifier = 'sources'
+            }
+
+            pom.withXml {
+                def root = asNode()
+                // For some weird reason description does not work in pomConfig, so doing it manually here.
+                root.appendNode('description', 'The official Couchbase Kafka Connector');
+                root.children().last() + pomConfig
+            }
+        }
+    }
+
+    repositories {
+        maven {
+            url "$buildDir/repo"
+        }
+    }
+}
+
+jar.manifest.mainAttributes(
+        'Implementation-Title': 'Couchbase Kafka Connector',
+        'Implementation-Version': ext.gitVersion,
+        'Implementation-Vendor': 'Couchbase, Inc.',
+        'Specification-Title': 'com.couchbase.kafka',
+        'Specification-Version': version,
+        'Specification-Vendor': 'Couchbase, Inc.'
+)
+
