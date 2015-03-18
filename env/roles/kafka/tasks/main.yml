@@ -1,0 +1,48 @@
+- name: download kafka 0.8.1.1
+  get_url: url=http://ftp.byfly.by/pub/apache.org/kafka/0.8.1.1/kafka_2.10-0.8.1.1.tgz
+           dest=/home/vagrant/kafka_2.10-0.8.1.1.tgz
+
+- name: uncompress kafka 0.8.1.1
+  sudo: yes
+  unarchive: src=/home/vagrant/kafka_2.10-0.8.1.1.tgz
+             dest=/opt copy=no
+
+- name: make symlink /opt/kafka
+  sudo: yes
+  file: src=/opt/kafka_2.10-0.8.1.1
+        dest=/opt/kafka
+        state=link
+
+- name: install zookeeper service
+  sudo: yes
+  action: template src=zookeeper.service.j2
+          dest=/usr/lib/systemd/system/zookeeper.service
+  register: zookeeper
+
+- name: install kafka service
+  sudo: yes
+  action: template src=kafka.service.j2
+          dest=/usr/lib/systemd/system/kafka.service
+  register: kafka
+
+- name: enable automatic topic creation
+  sudo: yes
+  lineinfile: dest=/opt/kafka/config/server.properties
+              regexp="^auto.create.topics.enable"
+              line="auto.create.topics.enable=true"
+  register: kafka_config
+
+- name: reload daemon information
+  sudo: yes
+  command: systemctl daemon-reload
+  when: zookeeper|changed or kafka|changed or kafka_config|changed
+
+- name: restart zookeeper daemon
+  sudo: yes
+  service: name=zookeeper state=restarted enabled=true
+  when: zookeeper|changed
+
+- name: restart kafka daemon
+  sudo: yes
+  service: name=kafka state=restarted enabled=true
+  when: zookeeper|changed or kafka|changed

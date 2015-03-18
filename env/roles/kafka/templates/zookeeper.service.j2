@@ -1,0 +1,13 @@
+[Unit]
+Description=zookeeper service
+After=syslog.target network.target remote-fs.target nss-lookup.target
+
+[Service]
+Type=forking
+User=root
+ExecStart=/opt/kafka/bin/zookeeper-server-start.sh -daemon /opt/kafka/config/zookeeper.properties
+ExecStop=/opt/kafka/bin/zookeeper-server-stop.sh
+TimeoutSec=10
+
+[Install]
+WantedBy=multi-user.target

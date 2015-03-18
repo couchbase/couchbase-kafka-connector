@@ -1,0 +1,4 @@
+- name: install jre 1.7
+  sudo: yes
+  yum: name=java-1.7.0-openjdk
+       state=latest

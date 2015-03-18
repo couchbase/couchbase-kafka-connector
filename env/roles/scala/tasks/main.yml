@@ -1,0 +1,4 @@
+- name: install scala 2.10.4
+  sudo: yes
+  yum: name=http://www.scala-lang.org/files/archive/scala-2.10.4.rpm
+       state=present

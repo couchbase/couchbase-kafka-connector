@@ -1,0 +1,36 @@
+- name: install python-httplib2
+  sudo: yes
+  yum: name=python-httplib2 state=installed
+
+- name: check primary node state
+  uri: url=http://{{ cluster }}/pools user={{ username }} password={{ password }}
+  register: result
+
+- name: initialize primary node
+  shell: /opt/couchbase/bin/couchbase-cli node-init -c {{ cluster }} -u {{ username }} -p {{ password }} --node-init-hostname={{ primary_host }}
+  when: result.json.pools|count == 0
+
+- name: initialize cluster
+  shell: /opt/couchbase/bin/couchbase-cli cluster-init -c {{ cluster }} -u {{ username }} -p {{ password }} --cluster-init-username={{ username }} --cluster-init-password={{ password }} --cluster-init-port={{ port }} --cluster-init-ramsize={{ ram }}
+  when: result.json.pools|count == 0
+
+- name: check primary node state
+  uri: url=http://{{ couchbase_hosts[0].name }}:{{ port }}/pools user={{ username }} password={{ password }}
+  register: result
+
+- name: join additional nodes
+  shell: /opt/couchbase/bin/couchbase-cli server-add -c {{ cluster }} -u {{ username }} -p {{ password }} --server-add={{ item.name }}:{{ port }} --server-add-username={{ username }} --server-add-password={{ password }}
+  with_items: couchbase_hosts[:-1]
+  when: result.json.pools|count == 0
+
+- name: rebalance cluster
+  shell: /opt/couchbase/bin/couchbase-cli rebalance -c {{ cluster }} -u {{ username }} -p {{ password }}
+  when: result.json.pools|count == 0
+
+- name: list buckets
+  shell: /opt/couchbase/bin/couchbase-cli bucket-list -c {{ cluster }} -u {{ username }} -p {{ password }}
+  register: result
+
+- name: create bucket '{{ bucket_name }}'
+  shell: /opt/couchbase/bin/couchbase-cli bucket-create -c {{ cluster }} -u {{ username }} -p {{ password }} --bucket={{ bucket_name }} --bucket-type=couchbase --bucket-ramsize={{ bucket_size }} --bucket-replica={{ bucket_replica }}
+  when: not bucket_name in result.stdout_lines

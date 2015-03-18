@@ -1,0 +1,34 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+kafka_count = [ENV['KAFKA_NODES'].to_i, 1].max
+couchbase_count = [ENV['COUCHBASE_NODES'].to_i, 1].max
+
+Vagrant.configure(2) do |config|
+  kafka_nodes = (1..kafka_count).map do |idx|
+    {group: 'kafka', name: "kafka#{idx}.vagrant", address: "192.168.3.#{80 + idx}"}
+  end
+  couchbase_nodes = (1..couchbase_count).map do |idx|
+    {group: 'couchbase', name: "couchbase#{idx}.vagrant", address: "192.168.4.#{80 + idx}"}
+  end
+  hosts = kafka_nodes + couchbase_nodes
+  hosts.each do |host|
+    config.vm.define(host[:name]) do |node|
+      node.vm.box = 'avsej/centos7'
+      node.vm.network :private_network, ip: host[:address]
+      node.vm.hostname = host[:name]
+      node.vm.provision 'ansible' do |ansible|
+        ansible.playbook = 'vagrant.yml'
+        ansible.extra_vars = {
+          hosts: hosts,
+          kafka_hosts: kafka_nodes,
+          couchbase_hosts: couchbase_nodes}
+        ansible.groups = {
+          'kafka' => kafka_nodes.map { |n| n[:name] },
+          'couchbase' => couchbase_nodes.map { |n| n[:name] },
+          'couchbase_primary' => [couchbase_nodes.last[:name]]
+        }
+      end
+    end
+  end
+end

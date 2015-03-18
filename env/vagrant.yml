@@ -1,0 +1,19 @@
+---
+- hosts: all
+  roles:
+    - hosts
+    - firewalld
+
+- hosts: kafka
+  roles:
+    - java
+    - scala
+    - kafka
+
+- hosts: couchbase
+  roles:
+    - couchbase
+
+- hosts: couchbase_primary
+  roles:
+    - couchbase_cluster

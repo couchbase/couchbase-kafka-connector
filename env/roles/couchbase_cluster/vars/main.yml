@@ -1,0 +1,9 @@
+port: 8091
+primary_host: "{{ hostvars[groups['couchbase_primary'][0]]['inventory_hostname'] }}"
+cluster: "{{ hostvars[groups['couchbase_primary'][0]]['inventory_hostname'] }}:8091"
+username: Administrator
+password: password
+ram: 300
+bucket_name: default
+bucket_size: 100
+bucket_replica: 1

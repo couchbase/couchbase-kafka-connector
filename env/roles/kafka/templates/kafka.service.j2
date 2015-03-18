@@ -1,0 +1,14 @@
+[Unit]
+Description=kafka service
+Requires=zookeeper.service
+After=zookeeper.service
+
+[Service]
+Type=forking
+User=root
+ExecStart=/opt/kafka/bin/kafka-server-start.sh -daemon /opt/kafka/config/server.properties
+ExecStop=/opt/kafka/bin/kafka-server-stop.sh
+TimeoutSec=10
+
+[Install]
+WantedBy=multi-user.target

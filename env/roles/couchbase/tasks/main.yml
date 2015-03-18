@@ -1,0 +1,11 @@
+- name: download couchbase-server-{{ flavour }}_centos6_x86_64_{{ version }}-rel.rpm
+  get_url: url=http://{{ origin }}/couchbase-server-{{ flavour }}_centos6_x86_64_{{ version }}-rel.rpm
+           dest=/home/vagrant/couchbase-server-{{ flavour }}_centos6_x86_64_{{ version }}-rel.rpm
+
+- name: install couchbase server
+  sudo: yes
+  yum: name=/home/vagrant/couchbase-server-{{ flavour }}_centos6_x86_64_{{ version }}-rel.rpm
+       state=present
+
+- name: start service
+  service: name=couchbase-server state=started

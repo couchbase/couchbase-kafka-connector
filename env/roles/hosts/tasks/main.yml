@@ -1,0 +1,6 @@
+- name: build hosts file
+  sudo: true
+  lineinfile: dest=/etc/hosts regexp='.*{{ item.name }}$'
+              line="{{ item.address }} {{ item.name }}"
+              state=present
+  with_items: hosts
