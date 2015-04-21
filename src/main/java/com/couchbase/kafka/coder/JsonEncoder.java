@@ -37,6 +37,11 @@ import java.io.IOException;
 
 
 /**
+ * The {@link JsonEncoder} converts events from Couchbase to JSON.
+ *
+ * If the document body looks like JSON, it inserts it as a sub-tree of the resulting object,
+ * otherwise, it puts it as a String.
+ *
  * @author Sergey Avseyev
  */
 public class JsonEncoder extends AbstractEncoder {
@@ -47,6 +52,12 @@ public class JsonEncoder extends AbstractEncoder {
         super(properties);
     }
 
+    /**
+     * Encodes {@link DCPEvent} to JSON object.
+     *
+     * @param value event from Couchbase.
+     * @return JSON object in form of byte array.
+     */
     @Override
     public byte[] toBytes(final DCPEvent value) {
         try {

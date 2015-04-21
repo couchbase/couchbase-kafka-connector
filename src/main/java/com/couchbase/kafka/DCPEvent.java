@@ -25,21 +25,44 @@ package com.couchbase.kafka;
 import com.couchbase.client.core.message.CouchbaseMessage;
 import com.couchbase.client.core.message.dcp.MutationMessage;
 
+
 /**
+ * A pre allocated event which carries a {@link CouchbaseMessage} and associated information.
+ *
  * @author Sergey Avseyev
  */
+
 public class DCPEvent {
+    /**
+     * Current message from the stream.
+     */
     private CouchbaseMessage message;
 
+    /**
+     * Set the new message as a payload for this event.
+     *
+     * @param message the message to override.
+     * @return the {@link DCPEvent} for method chaining.
+     */
     public DCPEvent setMessage(final CouchbaseMessage message) {
         this.message = message;
         return this;
     }
 
+    /**
+     * Get the mesage from the payload.
+     *
+     * @return the actual message.
+     */
     public CouchbaseMessage message() {
         return message;
     }
 
+    /**
+     * Extract key from the payload.
+     *
+     * @return the key of message or null.
+     */
     public String key() {
         if (message instanceof MutationMessage) {
             MutationMessage mutation = (MutationMessage) message;

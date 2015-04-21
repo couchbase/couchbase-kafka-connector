@@ -27,9 +27,18 @@ import com.couchbase.client.core.message.dcp.RemoveMessage;
 import com.couchbase.kafka.DCPEvent;
 
 /**
+ * The {@link MutationsFilter} allows only mutations to be sent to Kafka.
+ *
  * @author Sergey Avseyev
  */
 public class MutationsFilter implements Filter {
+
+    /**
+     * Returns true if event is mutation.
+     *
+     * @param dcpEvent event object from Couchbase.
+     * @return true if event is mutation.
+     */
     public boolean pass(final DCPEvent dcpEvent) {
         return dcpEvent.message() instanceof MutationMessage
                 || dcpEvent.message() instanceof RemoveMessage;

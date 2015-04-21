@@ -47,6 +47,25 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /**
+ * {@link CouchbaseKafkaConnector} is an entry point of the library. It sets up connections with both Couchbase and
+ * Kafka clusters. And carries all events from Couchbase to Kafka.
+ *
+ * The example below will transfer all mutations from Couchbase bucket "my-bucket" as JSON to Kafka topic "my-topic".
+ * <pre>
+ * {@code
+ *  DefaultCouchbaseKafkaEnvironment.Builder builder =
+ *        (DefaultCouchbaseKafkaEnvironment.Builder) DefaultCouchbaseKafkaEnvironment.builder()
+ *           .kafkaFilterClass("kafka.serializer.StringEncoder")
+ *           .kafkaValueSerializerClass("com.couchbase.kafka.coder.JsonEncoder")
+ *           .dcpEnabled(true);
+ *  CouchbaseKafkaEnvironment env = builder.build();
+ *  CouchbaseKafkaConnector connector = CouchbaseKafkaConnector.create(env,
+ *                 "couchbase.example.com", "my-bucket", "pass",
+ *                 "kafka.example.com", "my-topic");
+ *  connector.run();
+ * }
+ * </pre>
+ *
  * @author Sergey Avseyev
  */
 public class CouchbaseKafkaConnector implements Runnable {
@@ -69,10 +88,26 @@ public class CouchbaseKafkaConnector implements Runnable {
     private final CouchbaseReader couchbaseReader;
     private final Filter filter;
 
+    /**
+     * Creates {@link CouchbaseKafkaConnector} with default settings. Like using "localhost" as endpoints,
+     * "default" Couchbase bucket and Kafka topic.
+     *
+     * @return {@link CouchbaseKafkaConnector} with default settings
+     */
     public static CouchbaseKafkaConnector create() {
         return create(DEFAULT_COUCHBASE_NODE, DEFAULT_BUCKET, DEFAULT_PASSWORD, DEFAULT_ZOOKEEPER_NODE, DEFAULT_TOPIC);
     }
 
+    /**
+     * Create {@link CouchbaseKafkaConnector} with specified settings.
+     *
+     * @param couchbaseNode address of Couchbase node.
+     * @param couchbaseBucket name of Couchbase bucket.
+     * @param couchbasePassword password for Couchbase bucket.
+     * @param kafkaZookeeper address of Zookeeper.
+     * @param kafkaTopic name of Kafka topic.
+     * @return configured {@link CouchbaseKafkaConnector}
+     */
     public static CouchbaseKafkaConnector create(final String couchbaseNode, final String couchbaseBucket, final String couchbasePassword,
                                                  final String kafkaZookeeper, final String kafkaTopic) {
 
@@ -80,6 +115,17 @@ public class CouchbaseKafkaConnector implements Runnable {
                 couchbaseNode, couchbaseBucket, couchbasePassword, kafkaZookeeper, kafkaTopic);
     }
 
+    /**
+     * Create {@link CouchbaseKafkaConnector} with specified settings and custom {@link CouchbaseKafkaEnvironment}.
+     *
+     * @param environment custom environment object.
+     * @param couchbaseNode address of Couchbase node.
+     * @param couchbaseBucket name of Couchbase bucket.
+     * @param couchbasePassword password for Couchbase bucket.
+     * @param kafkaZookeeper address of Zookeeper.
+     * @param kafkaTopic name of Kafka topic.
+     * @return configured {@link CouchbaseKafkaConnector}
+     */
     public static CouchbaseKafkaConnector create(final CouchbaseKafkaEnvironment environment,
                                                  final String couchbaseNode, final String couchbaseBucket, final String couchbasePassword,
                                                  final String kafkaZookeeper, final String kafkaTopic) {
@@ -87,6 +133,17 @@ public class CouchbaseKafkaConnector implements Runnable {
                 couchbaseBucket, couchbasePassword, kafkaZookeeper, kafkaTopic);
     }
 
+    /**
+     * Create {@link CouchbaseKafkaConnector} with specified settings (list of Couchbase nodes)
+     * and custom {@link CouchbaseKafkaEnvironment}.
+     *
+     * @param environment custom environment object.
+     * @param couchbaseNodes list of Couchbase node adresses.
+     * @param couchbaseBucket name of Couchbase bucket.
+     * @param couchbasePassword password for Couchbase bucket.
+     * @param kafkaZookeeper address of Zookeeper.
+     * @param kafkaTopic name of Kafka topic.
+     */
     private CouchbaseKafkaConnector(final CouchbaseKafkaEnvironment environment,
                                     final List<String> couchbaseNodes, final String couchbaseBucket, final String couchbasePassword,
                                     final String kafkaZookeeper, final String kafkaTopic) {
@@ -143,6 +200,9 @@ public class CouchbaseKafkaConnector implements Runnable {
         couchbaseReader.connect();
     }
 
+    /**
+     * Executes worker reading loop, which relays events from Couchbase to Kafka.
+     */
     @Override
     public void run() {
         couchbaseReader.run();

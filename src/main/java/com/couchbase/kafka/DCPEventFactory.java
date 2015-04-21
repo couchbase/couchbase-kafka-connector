@@ -25,6 +25,8 @@ package com.couchbase.kafka;
 import com.couchbase.client.deps.com.lmax.disruptor.EventFactory;
 
 /**
+ * A factory to preallocate {@link DCPEvent}s.
+ *
  * @author Sergey Avseyev
  */
 public class DCPEventFactory implements EventFactory<DCPEvent> {

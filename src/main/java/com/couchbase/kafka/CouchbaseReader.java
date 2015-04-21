@@ -44,6 +44,8 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 /**
+ * {@link CouchbaseReader} is in charge of accepting events from Couchbase.
+ *
  * @author Sergey Avseyev
  */
 public class CouchbaseReader {
@@ -54,6 +56,7 @@ public class CouchbaseReader {
     private final String streamName;
     private final String password;
 
+
     private static final EventTranslatorOneArg<DCPEvent, CouchbaseMessage> TRANSLATOR =
             new EventTranslatorOneArg<DCPEvent, CouchbaseMessage>() {
                 @Override
@@ -61,7 +64,15 @@ public class CouchbaseReader {
                     event.setMessage(message);
                 }
             };
-
+    /**
+     * Creates a new {@link KafkaWriter}.
+     *
+     * @param core the core reference.
+     * @param dcpRingBuffer the buffer where to publish new events.
+     * @param nodes the list of Couchbase nodes.
+     * @param bucket the name of source bucket.
+     * @param password the bucket password.
+     */
     public CouchbaseReader(final ClusterFacade core, final RingBuffer<DCPEvent> dcpRingBuffer, final List<String> nodes,
                            final String bucket, final String password) {
         this.core = core;
@@ -72,10 +83,19 @@ public class CouchbaseReader {
         this.streamName = "CouchbaseKafka(" + this.hashCode() + ")";
     }
 
+    /**
+     * Performs connection with 2 seconds timeout.
+     */
     public void connect() {
         connect(2, TimeUnit.SECONDS);
     }
 
+    /**
+     * Performs connection with arbitrary timeout
+     *
+     * @param timeout the custom timeout.
+     * @param timeUnit the unit for the timeout.
+     */
     public void connect(final long timeout, final TimeUnit timeUnit) {
         core.send(new SeedNodesRequest(nodes))
                 .timeout(timeout, timeUnit)
@@ -88,6 +108,9 @@ public class CouchbaseReader {
 
     }
 
+    /**
+     * Executes worker reading loop, which relays events from Couchbase to Kafka.
+     */
     public void run() {
         core.send(new OpenConnectionRequest(streamName, bucket))
                 .toList()

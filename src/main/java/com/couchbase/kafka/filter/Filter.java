@@ -25,8 +25,16 @@ package com.couchbase.kafka.filter;
 import com.couchbase.kafka.DCPEvent;
 
 /**
+ * General interface to select Couchbase events, which has to be sent to Kafka.
+ *
  * @author Sergey Avseyev
  */
 public interface Filter {
+    /**
+     * Decides whether dcpEvent should be sent to Kafka.
+     *
+     * @param dcpEvent event object from Couchbase.
+     * @return true if event should be sent to Kafka.
+     */
     boolean pass(DCPEvent dcpEvent);
 }

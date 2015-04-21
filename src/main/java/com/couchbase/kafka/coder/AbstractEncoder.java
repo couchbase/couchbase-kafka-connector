@@ -27,12 +27,19 @@ import kafka.serializer.Encoder;
 import kafka.utils.VerifiableProperties;
 
 /**
+ * Defines base for all encoders of Couchbase events.
+ *
  * @author Sergey Avseyev
  */
 public abstract class AbstractEncoder implements Encoder<DCPEvent> {
     public AbstractEncoder(final VerifiableProperties properties) {
     }
 
+    /**
+     * Serializes dcpEvent to stream of bytes.
+     * @param dcpEvent event from Couchbase
+     * @return array of bytes to send to Kafka
+     */
     @Override
     public abstract byte[] toBytes(DCPEvent dcpEvent);
 }

@@ -28,6 +28,8 @@ import kafka.javaapi.producer.Producer;
 import kafka.producer.KeyedMessage;
 
 /**
+ * {@link KafkaWriter} is in charge of filtering and routing events to the Kafka cluster.
+ *
  * @author Sergey Avseyev
  */
 public class KafkaWriter implements EventHandler<DCPEvent> {
@@ -36,12 +38,22 @@ public class KafkaWriter implements EventHandler<DCPEvent> {
     private final String topic;
     private final Filter filter;
 
+    /**
+     * Creates a new {@link KafkaWriter}.
+     *
+     * @param topic the topic, where events should be published.
+     * @param producer the kafka producer object.
+     * @param filter the filter to select events to publish.
+     */
     public KafkaWriter(final String topic, final Producer<String, DCPEvent> producer, final Filter filter) {
         this.topic = topic;
         this.producer = producer;
         this.filter = filter;
     }
 
+    /**
+     * Handles {@link DCPEvent}s that come into the response RingBuffer.
+     */
     @Override
     public void onEvent(final DCPEvent event, final long sequence, final boolean endOfBatch) throws Exception {
         if (filter.pass(event)) {

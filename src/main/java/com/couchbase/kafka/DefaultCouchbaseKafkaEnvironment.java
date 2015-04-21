@@ -23,11 +23,17 @@
 package com.couchbase.kafka;
 
 import com.couchbase.client.core.env.DefaultCoreEnvironment;
+import com.couchbase.client.core.logging.CouchbaseLogger;
+import com.couchbase.client.core.logging.CouchbaseLoggerFactory;
+
+import java.util.Properties;
 
 /**
  * @author Sergey Avseyev
  */
 public class DefaultCouchbaseKafkaEnvironment extends DefaultCoreEnvironment implements CouchbaseKafkaEnvironment {
+    private static final CouchbaseLogger LOGGER = CouchbaseLoggerFactory.getInstance(CouchbaseKafkaEnvironment.class);
+
     private static final String KAFKA_KEY_SERIALIZER_CLASS = "kafka.serializer.StringEncoder";
     private static final String KAFKA_VALUE_SERIALIZER_CLASS = "com.couchbase.kafka.coder.JsonEncoder";
     private static final String KAFKA_FILTER_CLASS = "com.couchbase.kafka.filter.MutationsFilter";
@@ -37,10 +43,64 @@ public class DefaultCouchbaseKafkaEnvironment extends DefaultCoreEnvironment imp
     private final String kafkaValueSerializerClass;
     private final int kafkaEventBufferSize;
 
+    public static String SDK_PACKAGE_NAME_AND_VERSION = "couchbase-kafka-connector";
+    private static final String VERSION_PROPERTIES = "com.couchbase.kafka.properties";
+
+    /**
+     * Sets up the package version and user agent.
+     *
+     * Note that because the class loader loads classes on demand, one class from the package
+     * is loaded upfront.
+     */
+    static {
+        try {
+            Class<CouchbaseKafkaConnector> connectorClass = CouchbaseKafkaConnector.class;
+            if (connectorClass == null) {
+                throw new IllegalStateException("Could not locate CouchbaseKafkaConnector");
+            }
+
+            String version = null;
+            String gitVersion = null;
+            try {
+                Properties versionProp = new Properties();
+                versionProp.load(DefaultCoreEnvironment.class.getClassLoader().getResourceAsStream(VERSION_PROPERTIES));
+                version = versionProp.getProperty("specificationVersion");
+                gitVersion = versionProp.getProperty("implementationVersion");
+            } catch (Exception e) {
+                LOGGER.info("Could not retrieve version properties, defaulting.", e);
+            }
+            SDK_PACKAGE_NAME_AND_VERSION = String.format("couchbase-kafka-connector/%s (git: %s)",
+                    version == null ? "unknown" : version, gitVersion == null ? "unknown" : gitVersion);
+
+            // this will overwrite the USER_AGENT in Core
+            // making core send user_agent with kafka connector version information
+            USER_AGENT = String.format("%s (%s/%s %s; %s %s)",
+                    SDK_PACKAGE_NAME_AND_VERSION,
+                    System.getProperty("os.name"),
+                    System.getProperty("os.version"),
+                    System.getProperty("os.arch"),
+                    System.getProperty("java.vm.name"),
+                    System.getProperty("java.runtime.version")
+            );
+        } catch (Exception ex) {
+            LOGGER.info("Could not set up user agent and packages, defaulting.", ex);
+        }
+    }
+
+    /**
+     * Creates a {@link CouchbaseKafkaEnvironment} with default settings applied.
+     *
+     * @return a {@link DefaultCouchbaseKafkaEnvironment} with default settings.
+     */
     public static DefaultCouchbaseKafkaEnvironment create() {
         return new DefaultCouchbaseKafkaEnvironment(builder());
     }
 
+    /**
+     * Returns the {@link Builder} to customize environment settings.
+     *
+     * @return the {@link Builder}.
+     */
     public static Builder builder() {
         return new Builder();
     }
