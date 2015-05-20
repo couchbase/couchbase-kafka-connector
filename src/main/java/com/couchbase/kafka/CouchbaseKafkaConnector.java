@@ -215,7 +215,7 @@ public class CouchbaseKafkaConnector implements Runnable {
             if (first) {
                 first = false;
             } else {
-                sb.append(";");
+                sb.append(",");
             }
             sb.append(item);
         }
