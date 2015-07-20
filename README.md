@@ -92,6 +92,7 @@ public class Example {
 
 The `couchbase1.vagrant` and `kafka1.vagrant` addresses above are locations of Couchbase Server and Kafka correspondingly,
 which could be easily set up using provisioning scripts from `env/` directory. Just navigate there and run `vagrant up`.
+Vagrant scripts using ansible ([installation guide](http://docs.ansible.com/intro_installation.html)).
 
 ## License
 
