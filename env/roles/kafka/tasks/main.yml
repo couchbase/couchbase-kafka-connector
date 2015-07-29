@@ -27,9 +27,7 @@
 
 - name: enable automatic topic creation
   sudo: yes
-  lineinfile: dest=/opt/kafka/config/server.properties
-              regexp="^auto.create.topics.enable"
-              line="auto.create.topics.enable=true"
+  template: src=server.properties.j2 dest=/opt/kafka/config/server.properties
   register: kafka_config
 
 - name: reload daemon information
