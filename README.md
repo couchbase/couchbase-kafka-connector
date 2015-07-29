@@ -81,10 +81,12 @@ public class Example {
                         .builder()
                         .kafkaFilterClass("example.SampleFilter")
                         .kafkaValueSerializerClass("example.SampleEncoder")
+                        .kafkaTopic("default")
+                        .kafkaZookeeperAddress("kafka1.vagrant")
+                        .couchbaseNodes("couchbase1.vagrant")
+                        .couchbaseBucket("default")
                         .dcpEnabled(true);
-        CouchbaseKafkaEnvironment env = builder.build();
-        CouchbaseKafkaConnector connector = CouchbaseKafkaConnector.create(
-                env, "couchbase1.vagrant", "default", "", "kafka1.vagrant", "default");
+        CouchbaseKafkaConnector connector = CouchbaseKafkaConnector.create(builder.build());
         connector.run();
     }
 }

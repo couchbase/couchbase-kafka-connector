@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<module external.linked.project.id="couchbase-kafka-connector" external.linked.project.path="$MODULE_DIR$" external.root.project.path="$MODULE_DIR$" external.system.id="GRADLE" external.system.module.group="com.couchbase.client" external.system.module.version="1.0.0-dp1" type="JAVA_MODULE" version="4">
+<module external.linked.project.id="couchbase-kafka-connector" external.linked.project.path="$MODULE_DIR$" external.root.project.path="$MODULE_DIR$" external.system.id="GRADLE" external.system.module.group="com.couchbase.client" external.system.module.version="1.1.0" type="JAVA_MODULE" version="4">
   <component name="NewModuleRootManager" inherit-compiler-output="false">
     <output url="file://$MODULE_DIR$/build/classes/main" />
     <output-test url="file://$MODULE_DIR$/build/classes/test" />
@@ -16,7 +16,6 @@
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="library" exported="" name="Gradle: org.apache.hadoop:hadoop-common:2.6.0" level="project" />
     <orderEntry type="library" exported="" name="Gradle: org.apache.hadoop:hadoop-hdfs:2.6.0" level="project" />
-    <orderEntry type="library" exported="" name="Gradle: io.reactivex:rxjava:1.0.4" level="project" />
     <orderEntry type="library" exported="" name="Gradle: org.apache.hadoop:hadoop-annotations:2.6.0" level="project" />
     <orderEntry type="library" exported="" name="Gradle: commons-cli:commons-cli:1.2" level="project" />
     <orderEntry type="library" exported="" name="Gradle: org.apache.commons:commons-math3:3.1.1" level="project" />
@@ -58,7 +57,6 @@
     <orderEntry type="library" exported="" name="Gradle: xerces:xercesImpl:2.9.1" level="project" />
     <orderEntry type="library" exported="" name="Gradle: com.yammer.metrics:metrics-core:2.2.0" level="project" />
     <orderEntry type="library" exported="" name="Gradle: net.sf.jopt-simple:jopt-simple:3.2" level="project" />
-    <orderEntry type="library" exported="" name="Gradle: com.101tec:zkclient:0.3" level="project" />
     <orderEntry type="library" exported="" name="Gradle: org.codehaus.jettison:jettison:1.1" level="project" />
     <orderEntry type="library" exported="" name="Gradle: com.sun.xml.bind:jaxb-impl:2.2.3-1" level="project" />
     <orderEntry type="library" exported="" name="Gradle: org.codehaus.jackson:jackson-jaxrs:1.8.3" level="project" />
@@ -97,7 +95,9 @@
     <orderEntry type="library" scope="TEST" name="Gradle: com.couchbase.client:java-client:2.1.0" level="project" />
     <orderEntry type="library" exported="" name="Gradle: org.slf4j:slf4j-simple:1.7.7" level="project" />
     <orderEntry type="library" exported="" name="Gradle: org.slf4j:slf4j-api:1.7.7" level="project" />
-    <orderEntry type="library" exported="" name="Gradle: com.couchbase.client:core-io:1.1.2" level="project" />
+    <orderEntry type="library" exported="" name="Gradle: io.reactivex:rxjava:1.0.13" level="project" />
+    <orderEntry type="library" exported="" name="Gradle: com.couchbase.client:core-io:1.2.0-dp2" level="project" />
+    <orderEntry type="library" exported="" name="Gradle: com.101tec:zkclient:0.3" level="project" />
   </component>
   <component name="org.twodividedbyzero.idea.findbugs">
     <option name="_basePreferences">

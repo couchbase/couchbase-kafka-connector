@@ -41,12 +41,12 @@ public class KafkaWriter implements EventHandler<DCPEvent> {
     /**
      * Creates a new {@link KafkaWriter}.
      *
-     * @param topic the topic, where events should be published.
-     * @param producer the kafka producer object.
-     * @param filter the filter to select events to publish.
+     * @param environment the environment object, which carries settings.
+     * @param producer    the kafka producer object.
+     * @param filter      the filter to select events to publish.
      */
-    public KafkaWriter(final String topic, final Producer<String, DCPEvent> producer, final Filter filter) {
-        this.topic = topic;
+    public KafkaWriter(final CouchbaseKafkaEnvironment environment, final Producer<String, DCPEvent> producer, final Filter filter) {
+        this.topic = environment.kafkaTopic();
         this.producer = producer;
         this.filter = filter;
     }

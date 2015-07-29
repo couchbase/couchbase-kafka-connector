@@ -69,7 +69,7 @@ def getVersionName() {
 }
 
 ext {
-    coreVersion = '1.1.2'
+    coreVersion = '1.2.0-dp2'
 
     slf4jVersion = '1.7.7'
     hadoopVersion = '2.6.0'
@@ -82,6 +82,7 @@ ext {
 }
 
 repositories {
+    mavenLocal()
     mavenCentral()
     maven { url { "http://files.couchbase.com/maven2" } }
 }

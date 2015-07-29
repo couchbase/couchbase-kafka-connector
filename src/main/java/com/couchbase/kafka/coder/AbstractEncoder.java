@@ -37,6 +37,7 @@ public abstract class AbstractEncoder implements Encoder<DCPEvent> {
 
     /**
      * Serializes dcpEvent to stream of bytes.
+     *
      * @param dcpEvent event from Couchbase
      * @return array of bytes to send to Kafka
      */

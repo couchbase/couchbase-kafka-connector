@@ -24,18 +24,23 @@ package com.couchbase.kafka;
 
 import com.couchbase.client.core.ClusterFacade;
 import com.couchbase.client.core.config.CouchbaseBucketConfig;
+import com.couchbase.client.core.dcp.BucketStreamAggregator;
+import com.couchbase.client.core.dcp.BucketStreamAggregatorState;
+import com.couchbase.client.core.dcp.BucketStreamState;
+import com.couchbase.client.core.dcp.BucketStreamStateUpdatedEvent;
 import com.couchbase.client.core.message.CouchbaseMessage;
-import com.couchbase.client.core.message.CouchbaseResponse;
 import com.couchbase.client.core.message.cluster.GetClusterConfigRequest;
 import com.couchbase.client.core.message.cluster.GetClusterConfigResponse;
 import com.couchbase.client.core.message.cluster.OpenBucketRequest;
 import com.couchbase.client.core.message.cluster.SeedNodesRequest;
 import com.couchbase.client.core.message.dcp.DCPRequest;
-import com.couchbase.client.core.message.dcp.OpenConnectionRequest;
-import com.couchbase.client.core.message.dcp.StreamRequestRequest;
+import com.couchbase.client.core.message.dcp.FailoverLogEntry;
+import com.couchbase.client.core.message.dcp.SnapshotMarkerMessage;
 import com.couchbase.client.core.message.dcp.StreamRequestResponse;
 import com.couchbase.client.deps.com.lmax.disruptor.EventTranslatorOneArg;
 import com.couchbase.client.deps.com.lmax.disruptor.RingBuffer;
+import com.couchbase.kafka.state.RunMode;
+import com.couchbase.kafka.state.StateSerializer;
 import rx.Observable;
 import rx.functions.Action1;
 import rx.functions.Func1;
@@ -49,14 +54,6 @@ import java.util.concurrent.TimeUnit;
  * @author Sergey Avseyev
  */
 public class CouchbaseReader {
-    private final ClusterFacade core;
-    private final RingBuffer<DCPEvent> dcpRingBuffer;
-    private final List<String> nodes;
-    private final String bucket;
-    private final String streamName;
-    private final String password;
-
-
     private static final EventTranslatorOneArg<DCPEvent, CouchbaseMessage> TRANSLATOR =
             new EventTranslatorOneArg<DCPEvent, CouchbaseMessage>() {
                 @Override
@@ -64,22 +61,34 @@ public class CouchbaseReader {
                     event.setMessage(message);
                 }
             };
+    private final ClusterFacade core;
+    private final RingBuffer<DCPEvent> dcpRingBuffer;
+    private final List<String> nodes;
+    private final String bucket;
+    private final String streamName;
+    private final String password;
+    private final BucketStreamAggregator streamAggregator;
+    private final StateSerializer stateSerializer;
+    private int numberOfPartitions;
+
+
     /**
      * Creates a new {@link KafkaWriter}.
      *
-     * @param core the core reference.
-     * @param dcpRingBuffer the buffer where to publish new events.
-     * @param nodes the list of Couchbase nodes.
-     * @param bucket the name of source bucket.
-     * @param password the bucket password.
+     * @param core            the core reference.
+     * @param environment     the environment object, which carries settings.
+     * @param dcpRingBuffer   the buffer where to publish new events.
+     * @param stateSerializer the object to serialize the state of DCP streams.
      */
-    public CouchbaseReader(final ClusterFacade core, final RingBuffer<DCPEvent> dcpRingBuffer, final List<String> nodes,
-                           final String bucket, final String password) {
+    public CouchbaseReader(final ClusterFacade core, final CouchbaseKafkaEnvironment environment,
+                           final RingBuffer<DCPEvent> dcpRingBuffer, final StateSerializer stateSerializer) {
         this.core = core;
         this.dcpRingBuffer = dcpRingBuffer;
-        this.nodes = nodes;
-        this.bucket = bucket;
-        this.password = password;
+        this.nodes = environment.couchbaseNodes();
+        this.bucket = environment.couchbaseBucket();
+        this.password = environment.couchbasePassword();
+        this.streamAggregator = new BucketStreamAggregator(core, bucket);
+        this.stateSerializer = stateSerializer;
         this.streamName = "CouchbaseKafka(" + this.hashCode() + ")";
     }
 
@@ -93,7 +102,7 @@ public class CouchbaseReader {
     /**
      * Performs connection with arbitrary timeout
      *
-     * @param timeout the custom timeout.
+     * @param timeout  the custom timeout.
      * @param timeUnit the unit for the timeout.
      */
     public void connect(final long timeout, final TimeUnit timeUnit) {
@@ -105,66 +114,92 @@ public class CouchbaseReader {
                 .timeout(timeout, timeUnit)
                 .toBlocking()
                 .single();
+        numberOfPartitions = core.<GetClusterConfigResponse>send(new GetClusterConfigRequest())
+                .map(new Func1<GetClusterConfigResponse, Integer>() {
+                    @Override
+                    public Integer call(GetClusterConfigResponse response) {
+                        CouchbaseBucketConfig config = (CouchbaseBucketConfig) response.config().bucketConfig(bucket);
+                        return config.numberOfPartitions();
+                    }
+                })
+                .timeout(timeout, timeUnit)
+                .toBlocking()
+                .single();
+    }
 
+    /**
+     * Continue from the state where the stream was left.
+     */
+    public void run() {
+        run(new BucketStreamAggregatorState(numberOfPartitions), RunMode.LOAD_AND_RESUME);
+    }
+
+    /**
+     * Run with specified mode.
+     *
+     * @param mode running mode. See {@link RunMode} for details.
+     */
+    public void run(RunMode mode) {
+        run(new BucketStreamAggregatorState(numberOfPartitions), mode);
     }
 
     /**
      * Executes worker reading loop, which relays events from Couchbase to Kafka.
      */
-    public void run() {
-        core.send(new OpenConnectionRequest(streamName, bucket))
-                .toList()
-                .flatMap(new Func1<List<CouchbaseResponse>, Observable<Integer>>() {
+    public void run(final BucketStreamAggregatorState state, RunMode mode) {
+        if (mode == RunMode.LOAD_AND_RESUME) {
+            stateSerializer.load(state);
+        }
+        state.updates().subscribe(
+                new Action1<BucketStreamStateUpdatedEvent>() {
                     @Override
-                    public Observable<Integer> call(final List<CouchbaseResponse> couchbaseResponses) {
-                        return partitionSize();
+                    public void call(BucketStreamStateUpdatedEvent event) {
+                        if (event.partialUpdate()) {
+                            stateSerializer.dump(event.aggregatorState());
+                        } else {
+                            stateSerializer.dump(event.aggregatorState(), event.partition());
+                        }
                     }
-                })
-                .flatMap(new Func1<Integer, Observable<DCPRequest>>() {
+                });
+        streamAggregator.open(streamName, state)
+                .flatMap(new Func1<StreamRequestResponse, Observable<DCPRequest>>() {
                     @Override
-                    public Observable<DCPRequest> call(final Integer numberOfPartitions) {
-                        return requestStreams(numberOfPartitions);
+                    public Observable<DCPRequest> call(StreamRequestResponse response) {
+                        final BucketStreamState initialState = state.get(response.partition());
+                        FailoverLogEntry mostRecentEntry = null;
+                        for (FailoverLogEntry failoverLogEntry : response.failoverLog()) {
+                            if (mostRecentEntry == null || failoverLogEntry.sequenceNumber() > mostRecentEntry.sequenceNumber()) {
+                                mostRecentEntry = failoverLogEntry;
+                            }
+                        }
+                        final BucketStreamState newState = new BucketStreamState(
+                                mostRecentEntry == null ? initialState.vbucketUUID() : mostRecentEntry.vbucketUUID(),
+                                mostRecentEntry == null ? initialState.startSequenceNumber() : mostRecentEntry.sequenceNumber(),
+                                initialState.endSequenceNumber(),
+                                initialState.snapshotStartSequenceNumber(),
+                                initialState.snapshotEndSequenceNumber());
+                        state.set(response.partition(), newState, false);
+                        return response.stream();
                     }
                 })
                 .toBlocking()
                 .forEach(new Action1<DCPRequest>() {
                     @Override
                     public void call(final DCPRequest dcpRequest) {
-                        dcpRingBuffer.tryPublishEvent(TRANSLATOR, dcpRequest);
+                        if (dcpRequest instanceof SnapshotMarkerMessage) {
+                            SnapshotMarkerMessage snapshotMarker = (SnapshotMarkerMessage) dcpRequest;
+                            final BucketStreamState oldState = state.get(snapshotMarker.partition());
+                            BucketStreamState newState = new BucketStreamState(
+                                    oldState.vbucketUUID(),
+                                    snapshotMarker.endSequenceNumber(),
+                                    oldState.endSequenceNumber(),
+                                    snapshotMarker.endSequenceNumber(),
+                                    oldState.snapshotEndSequenceNumber());
+                            state.set(snapshotMarker.partition(), newState);
+                        } else {
+                            dcpRingBuffer.tryPublishEvent(TRANSLATOR, dcpRequest);
+                        }
                     }
                 });
-
-    }
-
-
-    private Observable<Integer> partitionSize() {
-        return core
-                .<GetClusterConfigResponse>send(new GetClusterConfigRequest())
-                .map(new Func1<GetClusterConfigResponse, Integer>() {
-                    @Override
-                    public Integer call(final GetClusterConfigResponse response) {
-                        CouchbaseBucketConfig config = (CouchbaseBucketConfig) response
-                                .config().bucketConfig(bucket);
-                        return config.numberOfPartitions();
-                    }
-                });
-    }
-
-    private Observable<DCPRequest> requestStreams(final int numberOfPartitions) {
-        return Observable.merge(
-                Observable.range(0, numberOfPartitions)
-                        .flatMap(new Func1<Integer, Observable<StreamRequestResponse>>() {
-                            @Override
-                            public Observable<StreamRequestResponse> call(final Integer partition) {
-                                return core.send(new StreamRequestRequest(partition.shortValue(), bucket));
-                            }
-                        })
-                        .map(new Func1<StreamRequestResponse, Observable<DCPRequest>>() {
-                            @Override
-                            public Observable<DCPRequest> call(final StreamRequestResponse response) {
-                                return response.stream();
-                            }
-                        })
-        );
     }
 }
