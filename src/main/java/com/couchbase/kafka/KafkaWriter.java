@@ -22,6 +22,7 @@
 
 package com.couchbase.kafka;
 
+import com.couchbase.client.core.message.dcp.MutationMessage;
 import com.couchbase.client.deps.com.lmax.disruptor.EventHandler;
 import com.couchbase.kafka.filter.Filter;
 import kafka.javaapi.producer.Producer;
@@ -60,6 +61,10 @@ public class KafkaWriter implements EventHandler<DCPEvent> {
             KeyedMessage<String, DCPEvent> payload =
                     new KeyedMessage<String, DCPEvent>(topic, event.key(), event);
             producer.send(payload);
+            if (event.message() instanceof MutationMessage) {
+                MutationMessage mutation = (MutationMessage) event.message();
+                mutation.content().release();
+            }
         }
     }
 }
