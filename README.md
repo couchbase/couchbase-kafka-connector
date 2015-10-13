@@ -92,6 +92,15 @@ public class Example {
 }
 ```
 
+It is also possible to start with some known state or watching reduced set of partitions. Example below will stream
+only partition 115 starting from beginning.
+
+```java
+BucketStreamAggregatorState state = new BucketStreamAggregatorState("test");
+state.put(new BucketStreamState((short)115, 0, 0, 0xffffffff, 0, 0xffffffff));
+connector.run(state, RunMode.RESUME);
+```
+
 The `couchbase1.vagrant` and `kafka1.vagrant` addresses above are locations of Couchbase Server and Kafka correspondingly,
 which could be easily set up using provisioning scripts from `env/` directory. Just navigate there and run `vagrant up`.
 Vagrant scripts using ansible ([installation guide](http://docs.ansible.com/intro_installation.html)).

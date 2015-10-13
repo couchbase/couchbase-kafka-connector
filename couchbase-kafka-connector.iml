@@ -95,9 +95,9 @@
     <orderEntry type="library" scope="TEST" name="Gradle: com.couchbase.client:java-client:2.1.0" level="project" />
     <orderEntry type="library" exported="" name="Gradle: org.slf4j:slf4j-simple:1.7.7" level="project" />
     <orderEntry type="library" exported="" name="Gradle: org.slf4j:slf4j-api:1.7.7" level="project" />
-    <orderEntry type="library" exported="" name="Gradle: io.reactivex:rxjava:1.0.13" level="project" />
-    <orderEntry type="library" exported="" name="Gradle: com.couchbase.client:core-io:1.2.0-dp2" level="project" />
     <orderEntry type="library" exported="" name="Gradle: com.101tec:zkclient:0.3" level="project" />
+    <orderEntry type="library" exported="" name="Gradle: com.couchbase.client:core-io:1.2.1" level="project" />
+    <orderEntry type="library" exported="" name="Gradle: io.reactivex:rxjava:1.0.14" level="project" />
   </component>
   <component name="org.twodividedbyzero.idea.findbugs">
     <option name="_basePreferences">
