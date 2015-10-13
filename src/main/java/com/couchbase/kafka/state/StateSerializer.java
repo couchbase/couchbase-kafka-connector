@@ -9,9 +9,9 @@ import com.couchbase.client.core.dcp.BucketStreamState;
 public interface StateSerializer {
     void dump(BucketStreamAggregatorState aggregatorState);
 
-    void dump(BucketStreamAggregatorState aggregatorState, int partition);
+    void dump(BucketStreamAggregatorState aggregatorState, short partition);
 
     BucketStreamAggregatorState load(BucketStreamAggregatorState aggregatorState);
 
-    BucketStreamState load(BucketStreamAggregatorState aggregatorState, int partition);
+    BucketStreamState load(BucketStreamAggregatorState aggregatorState, short partition);
 }

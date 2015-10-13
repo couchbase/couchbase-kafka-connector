@@ -24,6 +24,7 @@ package com.couchbase.kafka;
 
 import com.couchbase.client.core.ClusterFacade;
 import com.couchbase.client.core.CouchbaseCore;
+import com.couchbase.client.core.dcp.BucketStreamAggregatorState;
 import com.couchbase.client.core.logging.CouchbaseLogger;
 import com.couchbase.client.core.logging.CouchbaseLoggerFactory;
 import com.couchbase.client.deps.com.lmax.disruptor.ExceptionHandler;
@@ -31,6 +32,7 @@ import com.couchbase.client.deps.com.lmax.disruptor.RingBuffer;
 import com.couchbase.client.deps.com.lmax.disruptor.dsl.Disruptor;
 import com.couchbase.client.deps.io.netty.util.concurrent.DefaultThreadFactory;
 import com.couchbase.kafka.filter.Filter;
+import com.couchbase.kafka.state.RunMode;
 import com.couchbase.kafka.state.StateSerializer;
 import kafka.cluster.Broker;
 import kafka.javaapi.producer.Producer;
@@ -204,6 +206,14 @@ public class CouchbaseKafkaConnector implements Runnable {
     @Override
     public void run() {
         couchbaseReader.run();
+    }
+
+    public void run(RunMode mode) {
+        couchbaseReader.run(mode);
+    }
+
+    public void run(final BucketStreamAggregatorState state, final RunMode mode) {
+        couchbaseReader.run(state, mode);
     }
 
     private String joinNodes(final List<String> list) {

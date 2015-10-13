@@ -131,7 +131,7 @@ public class CouchbaseReader {
      * Continue from the state where the stream was left.
      */
     public void run() {
-        run(new BucketStreamAggregatorState(numberOfPartitions), RunMode.LOAD_AND_RESUME);
+        run(RunMode.LOAD_AND_RESUME);
     }
 
     /**
@@ -139,14 +139,18 @@ public class CouchbaseReader {
      *
      * @param mode running mode. See {@link RunMode} for details.
      */
-    public void run(RunMode mode) {
-        run(new BucketStreamAggregatorState(numberOfPartitions), mode);
+    public void run(final RunMode mode) {
+        BucketStreamAggregatorState state = new BucketStreamAggregatorState(streamName);
+        for (int i = 0; i < numberOfPartitions; i++) {
+            state.put(new BucketStreamState((short) i, 0, 0, 0xffffffff, 0, 0xffffffff));
+        }
+        run(state, mode);
     }
 
     /**
      * Executes worker reading loop, which relays events from Couchbase to Kafka.
      */
-    public void run(final BucketStreamAggregatorState state, RunMode mode) {
+    public void run(final BucketStreamAggregatorState state, final RunMode mode) {
         if (mode == RunMode.LOAD_AND_RESUME) {
             stateSerializer.load(state);
         }
@@ -157,11 +161,11 @@ public class CouchbaseReader {
                         if (event.partialUpdate()) {
                             stateSerializer.dump(event.aggregatorState());
                         } else {
-                            stateSerializer.dump(event.aggregatorState(), event.partition());
+                            stateSerializer.dump(event.aggregatorState(), event.partitionState().partition());
                         }
                     }
                 });
-        streamAggregator.open(streamName, state)
+        streamAggregator.open(state)
                 .flatMap(new Func1<StreamRequestResponse, Observable<DCPRequest>>() {
                     @Override
                     public Observable<DCPRequest> call(StreamRequestResponse response) {
@@ -172,13 +176,13 @@ public class CouchbaseReader {
                                 mostRecentEntry = failoverLogEntry;
                             }
                         }
-                        final BucketStreamState newState = new BucketStreamState(
+                        state.put(new BucketStreamState(
+                                response.partition(),
                                 mostRecentEntry == null ? initialState.vbucketUUID() : mostRecentEntry.vbucketUUID(),
                                 mostRecentEntry == null ? initialState.startSequenceNumber() : mostRecentEntry.sequenceNumber(),
                                 initialState.endSequenceNumber(),
                                 initialState.snapshotStartSequenceNumber(),
-                                initialState.snapshotEndSequenceNumber());
-                        state.set(response.partition(), newState, false);
+                                initialState.snapshotEndSequenceNumber()), false);
                         return response.stream();
                     }
                 })
@@ -189,13 +193,13 @@ public class CouchbaseReader {
                         if (dcpRequest instanceof SnapshotMarkerMessage) {
                             SnapshotMarkerMessage snapshotMarker = (SnapshotMarkerMessage) dcpRequest;
                             final BucketStreamState oldState = state.get(snapshotMarker.partition());
-                            BucketStreamState newState = new BucketStreamState(
+                            state.put(new BucketStreamState(
+                                    snapshotMarker.partition(),
                                     oldState.vbucketUUID(),
                                     snapshotMarker.endSequenceNumber(),
                                     oldState.endSequenceNumber(),
                                     snapshotMarker.endSequenceNumber(),
-                                    oldState.snapshotEndSequenceNumber());
-                            state.set(snapshotMarker.partition(), newState);
+                                    oldState.snapshotEndSequenceNumber()));
                         } else {
                             dcpRingBuffer.tryPublishEvent(TRANSLATOR, dcpRequest);
                         }

@@ -52,14 +52,14 @@ public class ZookeeperStateSerializer implements StateSerializer {
 
     @Override
     public void dump(BucketStreamAggregatorState aggregatorState) {
-        for (int partition = 0; partition < aggregatorState.numPartitions(); partition++) {
+        for (short partition = 0; partition < aggregatorState.size(); partition++) {
             dump(aggregatorState, partition);
         }
     }
 
     @Override
-    public void dump(BucketStreamAggregatorState aggregatorState, int partition) {
-        final BucketStreamState streamState = aggregatorState.get(partition);
+    public void dump(BucketStreamAggregatorState aggregatorState, short partition) {
+        final BucketStreamState streamState = aggregatorState.get((short) partition);
         ObjectNode json = MAPPER.createObjectNode();
         json.put("vbucketUUID", streamState.vbucketUUID());
         json.put("startSequenceNumber", streamState.startSequenceNumber());
@@ -72,17 +72,17 @@ public class ZookeeperStateSerializer implements StateSerializer {
 
     @Override
     public BucketStreamAggregatorState load(BucketStreamAggregatorState aggregatorState) {
-        for (int partition = 0; partition < aggregatorState.numPartitions(); partition++) {
+        for (short partition = 0; partition < aggregatorState.size(); partition++) {
             BucketStreamState streamState = load(aggregatorState, partition);
             if (streamState != null) {
-                aggregatorState.set(partition, streamState, false);
+                aggregatorState.put(streamState, false);
             }
         }
         return aggregatorState;
     }
 
     @Override
-    public BucketStreamState load(BucketStreamAggregatorState aggregatorState, int partition) {
+    public BucketStreamState load(BucketStreamAggregatorState aggregatorState, short partition) {
         String json = zkClient.readData(pathForState(partition), true);
         if (json == null) {
             return null;
@@ -90,6 +90,7 @@ public class ZookeeperStateSerializer implements StateSerializer {
         try {
             JsonNode tree = MAPPER.readTree(json);
             return new BucketStreamState(
+                    (short) partition,
                     tree.get("vbucketUUID").asLong(0),
                     tree.get("startSequenceNumber").asLong(0),
                     tree.get("endSequenceNumber").asLong(0),
