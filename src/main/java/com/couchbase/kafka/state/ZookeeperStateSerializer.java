@@ -28,13 +28,13 @@ import com.couchbase.client.deps.com.fasterxml.jackson.databind.JsonNode;
 import com.couchbase.client.deps.com.fasterxml.jackson.databind.ObjectMapper;
 import com.couchbase.client.deps.com.fasterxml.jackson.databind.node.ObjectNode;
 import com.couchbase.kafka.CouchbaseKafkaEnvironment;
+import com.google.common.base.Joiner;
 import kafka.utils.ZKStringSerializer$;
 import org.I0Itec.zkclient.ZkClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.nio.file.Paths;
 
 /**
  * @author Sergey Avseyev
@@ -112,6 +112,6 @@ public class ZookeeperStateSerializer implements StateSerializer {
     }
 
     private String pathForState(final int partition) {
-        return Paths.get("/couchbase-kafka-connector", bucket, Integer.toString(partition)).toString();
+        return Joiner.on("/").join("/couchbase-kafka-connector", bucket, Integer.toString(partition));
     }
 }
