@@ -1,3 +1,7 @@
+- name: install epel
+  sudo: yes
+  yum: name=epel-release state=installed
+
 - name: install python-httplib2
   sudo: yes
   yum: name=python-httplib2 state=installed

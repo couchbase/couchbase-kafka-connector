@@ -1,5 +1,5 @@
 - name: download couchbase server
-  get_url: url=http://packages.couchbase.com/releases/4.0.0-beta/couchbase-server-enterprise-4.0.0-beta-centos7.x86_64.rpm
+  get_url: url=http://packages.couchbase.com/releases/4.0.0/couchbase-server-enterprise-4.0.0-centos7.x86_64.rpm
            dest=/home/vagrant/couchbase-server.rpm
 
 - name: install couchbase server
