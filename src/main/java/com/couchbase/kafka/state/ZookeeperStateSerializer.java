@@ -52,8 +52,8 @@ public class ZookeeperStateSerializer implements StateSerializer {
 
     @Override
     public void dump(BucketStreamAggregatorState aggregatorState) {
-        for (short partition = 0; partition < aggregatorState.size(); partition++) {
-            dump(aggregatorState, partition);
+        for (BucketStreamState streamState : aggregatorState) {
+            dump(aggregatorState, streamState.partition());
         }
     }
 
@@ -72,10 +72,10 @@ public class ZookeeperStateSerializer implements StateSerializer {
 
     @Override
     public BucketStreamAggregatorState load(BucketStreamAggregatorState aggregatorState) {
-        for (short partition = 0; partition < aggregatorState.size(); partition++) {
-            BucketStreamState streamState = load(aggregatorState, partition);
-            if (streamState != null) {
-                aggregatorState.put(streamState, false);
+        for (BucketStreamState streamState : aggregatorState) {
+            BucketStreamState newState = load(aggregatorState, streamState.partition());
+            if (newState != null) {
+                aggregatorState.put(newState, false);
             }
         }
         return aggregatorState;
