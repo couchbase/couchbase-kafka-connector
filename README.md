@@ -1,8 +1,11 @@
 # Couchbase Kafka Connector
 
-Welcome to the official couchbase kafka connector! It provides functionality to direct stream of events from Couchbase
-Server to Kafka. It is still under development, so use with care and open issues if you come across them. Its issue 
-tracker located at [https://issues.couchbase.com/browse/KAFKAC](https://issues.couchbase.com/browse/KAFKAC).
+Welcome to the official Couchbase Kafka connector! It provides functionality to direct a stream of events from Couchbase
+Server to Kafka.
+
+You can read the quickstart guide below or consult the documentation here: http://developer.couchbase.com/documentation/server/4.0/connectors/kafka-1.0/kafka-intro.html
+
+The issue tracker can be found at [https://issues.couchbase.com/browse/KAFKAC](https://issues.couchbase.com/browse/KAFKAC)
 
 ## Quickstart
 
@@ -22,9 +25,8 @@ dependencies {
 }
 ```
 
-The usage of the library is pretty easy. Lets say we would like to receive every modification from the Couchbase Server 
-and send to Kafka only document body (by default connector serializes document body and metadata to JSON). To achieve
-that you need to define filter class which allow only instances of `MutationMessage` to pass through:
+Using the library is pretty easy. Let's say we would like to receive every modification from the Couchbase Server
+and send to Kafka only the document body (by default the connector serializes the document body and metadata to JSON). To achieve that, you need to define a filter class that allows only instances of `MutationMessage` to pass through:
 
 ```java
 package example;
@@ -41,7 +43,7 @@ public class SampleFilter implements Filter {
 }
 ```
 
-And encoder class, which takes document value converts it to byte array:
+And you also need an encoder class, which takes document value converts it to byte array:
 
 ```java
 package example;
@@ -65,7 +67,7 @@ public class SampleEncoder extends AbstractEncoder {
 }
 ```
 
-That essentially enough to setup Couchbase-Kafka bridge:
+That essentially is enough to setup a Couchbase-Kafka bridge:
 
 ```java
 package example;
@@ -92,8 +94,8 @@ public class Example {
 }
 ```
 
-It is also possible to start with some known state or watching reduced set of partitions. Example below will stream
-only partition 115 starting from beginning.
+It is also possible to start with some known state or to watch a limited set of partitions. The example below will stream
+only partition 115 starting from the beginning.
 
 ```java
 BucketStreamAggregatorState state = new BucketStreamAggregatorState("test");
@@ -101,9 +103,9 @@ state.put(new BucketStreamState((short)115, 0, 0, 0xffffffff, 0, 0xffffffff));
 connector.run(state, RunMode.RESUME);
 ```
 
-The `couchbase1.vagrant` and `kafka1.vagrant` addresses above are locations of Couchbase Server and Kafka correspondingly,
-which could be easily set up using provisioning scripts from `env/` directory. Just navigate there and run `vagrant up`.
-Vagrant scripts using ansible ([installation guide](http://docs.ansible.com/intro_installation.html)).
+The `couchbase1.vagrant` and `kafka1.vagrant` addresses above are the locations of Couchbase Server and Kafka respectively,
+which could be easily set up using provisioning scripts from the `env/` directory. Just navigate there and run `vagrant up`.
+Vagrant scripts using Ansible ([installation guide](http://docs.ansible.com/intro_installation.html)).
 
 ## License
 
