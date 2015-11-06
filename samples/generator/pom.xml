@@ -5,24 +5,14 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>couchbaselabs</groupId>
-    <artifactId>kafka-samples-producer</artifactId>
+    <artifactId>kafka-samples-generator</artifactId>
     <version>1.0-SNAPSHOT</version>
 
     <dependencies>
         <dependency>
             <groupId>com.couchbase.client</groupId>
-            <artifactId>kafka-connector</artifactId>
-            <version>1.2.0</version>
-        </dependency>
-        <dependency>
-            <groupId>com.couchbase.client</groupId>
-            <artifactId>core-io</artifactId>
-            <version>1.2.2-SNAPSHOT</version>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.kafka</groupId>
-            <artifactId>kafka_2.10</artifactId>
-            <version>0.8.2.0</version>
+            <artifactId>java-client</artifactId>
+            <version>2.2.1</version>
         </dependency>
     </dependencies>
     <build>
