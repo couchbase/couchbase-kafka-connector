@@ -69,11 +69,11 @@ def getVersionName() {
 }
 
 ext {
-    coreVersion = '1.2.1'
+    coreVersion = '1.2.2-SNAPSHOT'
 
     slf4jVersion = '1.7.7'
     hadoopVersion = '2.6.0'
-    kafkaVersion = '0.8.2.0'
+    kafkaVersion = '0.8.2.2'
 
     clientVersion = '2.1.0'
     junitVersion = '4.11'
