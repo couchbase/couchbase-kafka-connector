@@ -1,33 +1,3 @@
-- name: make sure firewalld started
+- name: make sure firewalld stopped and disabled
   sudo: yes
-  service: name=firewalld state=started enabled=true
-
-- name: install kafka service definition
-  sudo: yes
-  template: src=kafka.xml.j2 dest=/etc/firewalld/services/kafka.xml
-  register: kafka_config
-
-- name: install couchbase service definition
-  sudo: yes
-  template: src=couchbase.xml.j2 dest=/etc/firewalld/services/couchbase.xml
-  register: couchbase_config
-
-- name: restart firewalld
-  sudo: yes
-  service: name=firewalld state=restarted
-  when: kafka_config|changed or couchbase_config|changed
-
-- name: open kafka ports
-  sudo: yes
-  firewalld: service=kafka permanent=true state=enabled
-  register: kafka_config
-
-- name: open couchbase ports
-  sudo: yes
-  firewalld: service=couchbase permanent=true state=enabled
-  register: couchbase_config
-
-- name: restart firewalld
-  sudo: yes
-  service: name=firewalld state=restarted
-  when: kafka_config|changed or couchbase_config|changed
+  service: name=firewalld state=stopped enabled=false
