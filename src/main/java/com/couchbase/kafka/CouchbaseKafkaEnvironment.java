@@ -8,10 +8,10 @@ import java.util.List;
  * A {@link CouchbaseKafkaEnvironment} settings related to Kafka connection, in addition to all the core building blocks
  * like environment settings and thread pools inherited from {@link CoreEnvironment} so
  * that the application can work with it properly.
- * <p/>
+ *
  * This interface defines the contract. How properties are loaded is chosen by the implementation. See the
  * {@link DefaultCouchbaseKafkaEnvironment} class for the default implementation.
- * <p/>
+ *
  * Note that the {@link CouchbaseKafkaEnvironment} is stateful, so be sure to call {@link CoreEnvironment#shutdown()}
  * properly.
  *

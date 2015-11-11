@@ -164,6 +164,9 @@ public class CouchbaseReader {
 
     /**
      * Executes worker reading loop, which relays events from Couchbase to Kafka.
+     *
+     * @param state initial state for the streams
+     * @param mode the running mode
      */
     public void run(final BucketStreamAggregatorState state, final RunMode mode) {
         if (mode == RunMode.LOAD_AND_RESUME) {

@@ -38,7 +38,7 @@ import java.io.IOException;
 
 /**
  * The {@link JsonEncoder} converts events from Couchbase to JSON.
- * <p/>
+ * 
  * If the document body looks like JSON, it inserts it as a sub-tree of the resulting object,
  * otherwise, it puts it as a String.
  *

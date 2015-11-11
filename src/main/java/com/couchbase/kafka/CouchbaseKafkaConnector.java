@@ -232,6 +232,8 @@ public class CouchbaseKafkaConnector implements Runnable {
 
     /**
      * Returns current sequence numbers for each partition.
+     *
+     * @return the list of the objects representing sequence numbers
      */
     public MutationToken[] currentSequenceNumbers() {
         return core.<GetAllMutationTokensResponse>send(new GetAllMutationTokensRequest(GetAllMutationTokensRequest.PartitionState.ACTIVE,
