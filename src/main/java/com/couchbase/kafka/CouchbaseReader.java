@@ -70,7 +70,7 @@ public class CouchbaseReader {
 
 
     /**
-     * Creates a new {@link KafkaWriter}.
+     * Creates a new {@link CouchbaseReader}.
      *
      * @param core            the core reference.
      * @param environment     the environment object, which carries settings.
@@ -79,11 +79,29 @@ public class CouchbaseReader {
      */
     public CouchbaseReader(final ClusterFacade core, final CouchbaseKafkaEnvironment environment,
                            final RingBuffer<DCPEvent> dcpRingBuffer, final StateSerializer stateSerializer) {
+        this(environment.couchbaseNodes(), environment.couchbaseBucket(), environment.couchbasePassword(),
+                core, environment, dcpRingBuffer, stateSerializer);
+    }
+
+    /**
+     * Creates a new {@link CouchbaseReader}.
+     *
+     * @param couchbaseNodes    list of the Couchbase nodes to override {@link CouchbaseKafkaEnvironment#couchbaseNodes()}
+     * @param couchbaseBucket   bucket name to override {@link CouchbaseKafkaEnvironment#couchbaseBucket()}
+     * @param couchbasePassword password to override {@link CouchbaseKafkaEnvironment#couchbasePassword()}
+     * @param core              the core reference.
+     * @param environment       the environment object, which carries settings.
+     * @param dcpRingBuffer     the buffer where to publish new events.
+     * @param stateSerializer   the object to serialize the state of DCP streams.
+     */
+    public CouchbaseReader(final List<String> couchbaseNodes, final String couchbaseBucket, final String couchbasePassword,
+                           final ClusterFacade core, final CouchbaseKafkaEnvironment environment,
+                           final RingBuffer<DCPEvent> dcpRingBuffer, final StateSerializer stateSerializer) {
         this.core = core;
         this.dcpRingBuffer = dcpRingBuffer;
-        this.nodes = environment.couchbaseNodes();
-        this.bucket = environment.couchbaseBucket();
-        this.password = environment.couchbasePassword();
+        this.nodes = couchbaseNodes;
+        this.bucket = couchbaseBucket;
+        this.password = couchbasePassword;
         this.streamAggregator = new BucketStreamAggregator(core, bucket);
         this.stateSerializer = stateSerializer;
         this.streamName = "CouchbaseKafka(" + this.hashCode() + ")";

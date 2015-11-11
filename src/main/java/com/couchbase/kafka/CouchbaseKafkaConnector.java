@@ -56,7 +56,7 @@ import java.util.concurrent.Executors;
 /**
  * {@link CouchbaseKafkaConnector} is an entry point of the library. It sets up connections with both Couchbase and
  * Kafka clusters. And carries all events from Couchbase to Kafka.
- * <p/>
+ *
  * The example below will transfer all mutations from Couchbase bucket "my-bucket" as JSON to Kafka topic "my-topic".
  * <pre>
  * {@code
@@ -95,9 +95,15 @@ public class CouchbaseKafkaConnector implements Runnable {
      * Create {@link CouchbaseKafkaConnector} with specified settings (list of Couchbase nodes)
      * and custom {@link CouchbaseKafkaEnvironment}.
      *
-     * @param environment custom environment object.
+     * @param couchbaseNodes    address of Couchbase node to override {@link CouchbaseKafkaEnvironment#couchbaseNodes()}.
+     * @param couchbaseBucket   name of Couchbase bucket to override {@link CouchbaseKafkaEnvironment#couchbaseBucket()}.
+     * @param couchbasePassword password for Couchbase bucket to override {@link CouchbaseKafkaEnvironment#couchbasePassword()}.
+     * @param kafkaZookeeper    address of Zookeeper to override {@link CouchbaseKafkaEnvironment#kafkaZookeeperAddress()}.
+     * @param kafkaTopic        name of Kafka topic to override {@link CouchbaseKafkaEnvironment#kafkaTopic()}.
+     * @param environment       custom environment object.
      */
-    private CouchbaseKafkaConnector(final CouchbaseKafkaEnvironment environment) {
+    private CouchbaseKafkaConnector(final List<String> couchbaseNodes, final String couchbaseBucket, final String couchbasePassword,
+                                    final String kafkaZookeeper, final String kafkaTopic, final CouchbaseKafkaEnvironment environment) {
         try {
             filter = (Filter) Class.forName(environment.kafkaFilterClass()).newInstance();
         } catch (ReflectiveOperationException e) {
@@ -138,7 +144,7 @@ public class CouchbaseKafkaConnector implements Runnable {
         });
 
         final Properties props = new Properties();
-        ZkClient zkClient = new ZkClient(environment.kafkaZookeeperAddress(), 4000, 6000, ZKStringSerializer$.MODULE$);
+        ZkClient zkClient = new ZkClient(kafkaZookeeper, 4000, 6000, ZKStringSerializer$.MODULE$);
         List<String> brokerList = new ArrayList<String>();
         Iterator<Broker> brokerIterator = ZkUtils.getAllBrokersInCluster(zkClient).iterator();
         while (brokerIterator.hasNext()) {
@@ -153,11 +159,12 @@ public class CouchbaseKafkaConnector implements Runnable {
         final ProducerConfig producerConfig = new ProducerConfig(props);
         producer = new Producer<String, DCPEvent>(producerConfig);
 
-        kafkaWriter = new KafkaWriter(environment, producer, filter);
+        kafkaWriter = new KafkaWriter(kafkaTopic, environment, producer, filter);
         disruptor.handleEventsWith(kafkaWriter);
         disruptor.start();
         dcpRingBuffer = disruptor.getRingBuffer();
-        couchbaseReader = new CouchbaseReader(core, environment, dcpRingBuffer, stateSerializer);
+        couchbaseReader = new CouchbaseReader(couchbaseNodes, couchbaseBucket, couchbasePassword, core,
+                environment, dcpRingBuffer, stateSerializer);
         couchbaseReader.connect();
     }
 
@@ -180,7 +187,24 @@ public class CouchbaseKafkaConnector implements Runnable {
      * @return configured {@link CouchbaseKafkaConnector}
      */
     public static CouchbaseKafkaConnector create(final CouchbaseKafkaEnvironment environment) {
-        return new CouchbaseKafkaConnector(environment);
+        return create(environment.couchbaseNodes(), environment.couchbaseBucket(), environment.couchbasePassword(),
+                environment.kafkaZookeeperAddress(), environment.kafkaTopic(), environment);
+    }
+
+    /**
+     * Create {@link CouchbaseKafkaConnector} with specified settings.
+     *
+     * @param couchbaseNodes    address of Couchbase node to override {@link CouchbaseKafkaEnvironment#couchbaseNodes()}.
+     * @param couchbaseBucket   name of Couchbase bucket to override {@link CouchbaseKafkaEnvironment#couchbaseBucket()}.
+     * @param couchbasePassword password for Couchbase bucket to override {@link CouchbaseKafkaEnvironment#couchbasePassword()}.
+     * @param kafkaZookeeper    address of Zookeeper to override {@link CouchbaseKafkaEnvironment#kafkaZookeeperAddress()}.
+     * @param kafkaTopic        name of Kafka topic to override {@link CouchbaseKafkaEnvironment#kafkaTopic()}.
+     * @param environment       environment object
+     * @return configured {@link CouchbaseKafkaConnector}
+     */
+    public static CouchbaseKafkaConnector create(final List<String> couchbaseNodes, final String couchbaseBucket, final String couchbasePassword,
+                                                 final String kafkaZookeeper, final String kafkaTopic, final CouchbaseKafkaEnvironment environment) {
+        return new CouchbaseKafkaConnector(couchbaseNodes, couchbaseBucket, couchbasePassword, kafkaZookeeper, kafkaTopic, environment);
     }
 
     /**
