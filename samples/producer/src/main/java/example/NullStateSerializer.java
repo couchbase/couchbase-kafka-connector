@@ -48,7 +48,7 @@ public class NullStateSerializer implements StateSerializer {
 
     @Override
     public BucketStreamAggregatorState load(BucketStreamAggregatorState aggregatorState) {
-        return new BucketStreamAggregatorState(aggregatorState.name());
+        return new BucketStreamAggregatorState();
     }
 
     @Override

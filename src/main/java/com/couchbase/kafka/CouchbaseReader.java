@@ -23,18 +23,16 @@
 package com.couchbase.kafka;
 
 import com.couchbase.client.core.ClusterFacade;
-import com.couchbase.client.core.config.CouchbaseBucketConfig;
 import com.couchbase.client.core.dcp.BucketStreamAggregator;
 import com.couchbase.client.core.dcp.BucketStreamAggregatorState;
 import com.couchbase.client.core.dcp.BucketStreamState;
 import com.couchbase.client.core.dcp.BucketStreamStateUpdatedEvent;
 import com.couchbase.client.core.message.CouchbaseMessage;
-import com.couchbase.client.core.message.cluster.GetClusterConfigRequest;
-import com.couchbase.client.core.message.cluster.GetClusterConfigResponse;
 import com.couchbase.client.core.message.cluster.OpenBucketRequest;
 import com.couchbase.client.core.message.cluster.SeedNodesRequest;
 import com.couchbase.client.core.message.dcp.DCPRequest;
 import com.couchbase.client.core.message.dcp.SnapshotMarkerMessage;
+import com.couchbase.client.core.message.kv.MutationToken;
 import com.couchbase.client.deps.com.lmax.disruptor.EventTranslatorOneArg;
 import com.couchbase.client.deps.com.lmax.disruptor.RingBuffer;
 import com.couchbase.kafka.state.RunMode;
@@ -42,6 +40,7 @@ import com.couchbase.kafka.state.StateSerializer;
 import rx.functions.Action1;
 import rx.functions.Func1;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -62,12 +61,9 @@ public class CouchbaseReader {
     private final RingBuffer<DCPEvent> dcpRingBuffer;
     private final List<String> nodes;
     private final String bucket;
-    private final String streamName;
     private final String password;
-    private final BucketStreamAggregator streamAggregator;
     private final StateSerializer stateSerializer;
-    private int numberOfPartitions;
-
+    private final BucketStreamAggregator aggregator;
 
     /**
      * Creates a new {@link CouchbaseReader}.
@@ -102,9 +98,8 @@ public class CouchbaseReader {
         this.nodes = couchbaseNodes;
         this.bucket = couchbaseBucket;
         this.password = couchbasePassword;
-        this.streamAggregator = new BucketStreamAggregator(core, bucket);
         this.stateSerializer = stateSerializer;
-        this.streamName = "CouchbaseKafka(" + this.hashCode() + ")";
+        aggregator = new BucketStreamAggregator("CouchbaseKafka(" + this.hashCode() + ")", core, couchbaseBucket);
     }
 
     /**
@@ -129,44 +124,27 @@ public class CouchbaseReader {
                 .timeout(timeout, timeUnit)
                 .toBlocking()
                 .single();
-        numberOfPartitions = core.<GetClusterConfigResponse>send(new GetClusterConfigRequest())
-                .map(new Func1<GetClusterConfigResponse, Integer>() {
-                    @Override
-                    public Integer call(GetClusterConfigResponse response) {
-                        CouchbaseBucketConfig config = (CouchbaseBucketConfig) response.config().bucketConfig(bucket);
-                        return config.numberOfPartitions();
-                    }
-                })
-                .timeout(timeout, timeUnit)
-                .toBlocking()
-                .single();
     }
 
-    /**
-     * Continue from the state where the stream was left.
-     */
-    public void run() {
-        run(RunMode.LOAD_AND_RESUME);
-    }
-
-    /**
-     * Run with specified mode.
-     *
-     * @param mode running mode. See {@link RunMode} for details.
-     */
-    public void run(final RunMode mode) {
-        BucketStreamAggregatorState state = new BucketStreamAggregatorState(streamName);
-        for (int i = 0; i < numberOfPartitions; i++) {
-            state.put(new BucketStreamState((short) i, 0, 0, 0xffffffff, 0, 0xffffffff));
-        }
-        run(state, mode);
+    public MutationToken[] currentSequenceNumbers() {
+        return aggregator.getCurrentState().map(new Func1<BucketStreamAggregatorState, MutationToken[]>() {
+            @Override
+            public MutationToken[] call(BucketStreamAggregatorState aggregatorState) {
+                List<MutationToken> tokens = new ArrayList<MutationToken>(aggregatorState.size());
+                for (BucketStreamState streamState : aggregatorState) {
+                    tokens.add(new MutationToken(streamState.partition(),
+                            streamState.vbucketUUID(), streamState.startSequenceNumber()));
+                }
+                return tokens.toArray(new MutationToken[tokens.size()]);
+            }
+        }).toBlocking().first();
     }
 
     /**
      * Executes worker reading loop, which relays events from Couchbase to Kafka.
      *
      * @param state initial state for the streams
-     * @param mode the running mode
+     * @param mode  the running mode
      */
     public void run(final BucketStreamAggregatorState state, final RunMode mode) {
         if (mode == RunMode.LOAD_AND_RESUME) {
@@ -183,7 +161,7 @@ public class CouchbaseReader {
                         }
                     }
                 });
-        streamAggregator.feed(state)
+        aggregator.feed(state)
                 .toBlocking()
                 .forEach(new Action1<DCPRequest>() {
                     @Override

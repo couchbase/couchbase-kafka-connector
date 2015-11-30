@@ -28,8 +28,6 @@ import com.couchbase.client.core.dcp.BucketStreamAggregatorState;
 import com.couchbase.client.core.dcp.BucketStreamState;
 import com.couchbase.client.core.logging.CouchbaseLogger;
 import com.couchbase.client.core.logging.CouchbaseLoggerFactory;
-import com.couchbase.client.core.message.kv.GetAllMutationTokensRequest;
-import com.couchbase.client.core.message.kv.GetAllMutationTokensResponse;
 import com.couchbase.client.core.message.kv.MutationToken;
 import com.couchbase.client.deps.com.lmax.disruptor.ExceptionHandler;
 import com.couchbase.client.deps.com.lmax.disruptor.RingBuffer;
@@ -119,6 +117,7 @@ public class CouchbaseKafkaConnector implements Runnable {
                     environment.couchbaseStateSerializerClass(), e);
         }
         this.environment = environment;
+
         core = new CouchbaseCore(environment);
         disruptorExecutor = Executors.newFixedThreadPool(2, new DefaultThreadFactory("cb-kafka", true));
         disruptor = new Disruptor<DCPEvent>(
@@ -236,23 +235,21 @@ public class CouchbaseKafkaConnector implements Runnable {
      * @return the list of the objects representing sequence numbers
      */
     public MutationToken[] currentSequenceNumbers() {
-        return core.<GetAllMutationTokensResponse>send(new GetAllMutationTokensRequest(GetAllMutationTokensRequest.PartitionState.ACTIVE,
-                environment.couchbaseBucket())).single().toBlocking().first().mutationTokens();
+        return couchbaseReader.currentSequenceNumbers();
     }
 
     /**
      * Builds {@link BucketStreamAggregatorState} using current state of the bucket.
      *
-     * @param name the name of DCP state aggregator (and underlying DCP connection)
      * @param direction defines the range which should be defined. The current state
      *                  of the streams is pivot, Direction.TO_CURRENT will represent
      *                  all changes happened before current state, and Direction.FROM_CURRENT
      *                  represents changes that will happen in the future.
      * @return BucketStreamAggregatorState
      */
-    public BucketStreamAggregatorState buildState(final String name, final Direction direction) {
+    public BucketStreamAggregatorState buildState(final Direction direction) {
         MutationToken[] tokens = currentSequenceNumbers();
-        BucketStreamAggregatorState state = new BucketStreamAggregatorState(name);
+        BucketStreamAggregatorState state = new BucketStreamAggregatorState();
         for (MutationToken token : tokens) {
             long start = 0, end = 0;
             switch (direction) {
@@ -269,7 +266,7 @@ public class CouchbaseKafkaConnector implements Runnable {
                     end = 0xffffffff;
                     break;
             }
-            state.put(new BucketStreamState((short) token.vbucketID(), token.vbucketUUID(), start, end, 0, 0xffffffff));
+            state.put(new BucketStreamState((short) token.vbucketID(), token.vbucketUUID(), start, end, start, end));
         }
         return state;
     }
@@ -279,11 +276,11 @@ public class CouchbaseKafkaConnector implements Runnable {
      */
     @Override
     public void run() {
-        couchbaseReader.run();
+        run(RunMode.LOAD_AND_RESUME);
     }
 
     public void run(RunMode mode) {
-        couchbaseReader.run(mode);
+        run(buildState(Direction.EVERYTHING), mode);
     }
 
     public void run(final BucketStreamAggregatorState state, final RunMode mode) {
