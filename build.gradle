@@ -69,7 +69,7 @@ def getVersionName() {
 }
 
 ext {
-    coreVersion = '1.2.2'
+    coreVersion = '1.2.3-beta'
 
     slf4jVersion = '1.7.7'
     hadoopVersion = '2.6.0'
@@ -143,6 +143,12 @@ def pomConfig = {
     issueManagement {
         system "Couchbase JIRA"
         url "http://www.couchbase.com/issues/browse/KAFKAC"
+    }
+    distributionManagement {
+        repository {
+            id "couchbase"
+            url "http://files.couchbase.com/maven2"
+        }
     }
     developers {
         developer {

@@ -12,12 +12,12 @@
         <dependency>
             <groupId>com.couchbase.client</groupId>
             <artifactId>kafka-connector</artifactId>
-            <version>1.2.0</version>
+            <version>1.2.1</version>
         </dependency>
         <dependency>
             <groupId>com.couchbase.client</groupId>
             <artifactId>core-io</artifactId>
-            <version>1.2.2</version>
+            <version>1.2.3-beta</version>
         </dependency>
         <dependency>
             <groupId>org.apache.kafka</groupId>
@@ -25,6 +25,14 @@
             <version>0.8.2.0</version>
         </dependency>
     </dependencies>
+    <repositories>
+        <repository>
+            <id>couchbase</id>
+            <name>couchbase repo</name>
+            <url>http://files.couchbase.com/maven2</url>
+            <snapshots><enabled>false</enabled></snapshots>
+        </repository>
+    </repositories>
     <build>
         <plugins>
             <plugin>

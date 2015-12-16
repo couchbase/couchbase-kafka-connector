@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<module external.linked.project.id="couchbase-kafka-connector" external.linked.project.path="$MODULE_DIR$" external.root.project.path="$MODULE_DIR$" external.system.id="GRADLE" external.system.module.group="com.couchbase.client" external.system.module.version="1.1.0" type="JAVA_MODULE" version="4">
+<module external.linked.project.id="couchbase-kafka-connector" external.linked.project.path="$MODULE_DIR$" external.root.project.path="$MODULE_DIR$" external.system.id="GRADLE" external.system.module.group="com.couchbase.client" external.system.module.version="1.2.1" type="JAVA_MODULE" version="4">
   <component name="NewModuleRootManager" inherit-compiler-output="false">
     <output url="file://$MODULE_DIR$/build/classes/main" />
     <output-test url="file://$MODULE_DIR$/build/classes/test" />
@@ -17,7 +17,6 @@
     <orderEntry type="library" exported="" name="Gradle: org.slf4j:slf4j-simple:1.7.7" level="project" />
     <orderEntry type="library" exported="" name="Gradle: org.apache.hadoop:hadoop-common:2.6.0" level="project" />
     <orderEntry type="library" exported="" name="Gradle: org.apache.hadoop:hadoop-hdfs:2.6.0" level="project" />
-    <orderEntry type="library" exported="" name="Gradle: io.reactivex:rxjava:1.0.14" level="project" />
     <orderEntry type="library" exported="" name="Gradle: org.slf4j:slf4j-api:1.7.7" level="project" />
     <orderEntry type="library" exported="" name="Gradle: org.apache.hadoop:hadoop-annotations:2.6.0" level="project" />
     <orderEntry type="library" exported="" name="Gradle: commons-cli:commons-cli:1.2" level="project" />
@@ -93,11 +92,12 @@
     <orderEntry type="library" scope="TEST" name="Gradle: com.couchbase.client:java-client:2.1.0" level="project" />
     <orderEntry type="library" scope="TEST" name="Gradle: junit:junit:4.11" level="project" />
     <orderEntry type="library" scope="TEST" name="Gradle: org.hamcrest:hamcrest-core:1.3" level="project" />
-    <orderEntry type="library" exported="" name="Gradle: com.couchbase.client:core-io:1.2.2-SNAPSHOT" level="project" />
     <orderEntry type="library" exported="" name="Gradle: org.apache.kafka:kafka_2.10:0.8.2.2" level="project" />
     <orderEntry type="library" exported="" name="Gradle: org.apache.kafka:kafka-clients:0.8.2.2" level="project" />
     <orderEntry type="library" exported="" name="Gradle: org.xerial.snappy:snappy-java:1.1.1.7" level="project" />
     <orderEntry type="library" scope="TEST" name="Gradle: org.apache.kafka:kafka_2.10:0.8.2.2:test" level="project" />
+    <orderEntry type="library" exported="" name="Gradle: io.reactivex:rxjava:1.0.15" level="project" />
+    <orderEntry type="library" exported="" name="Gradle: com.couchbase.client:core-io:1.2.3-beta" level="project" />
   </component>
   <component name="org.twodividedbyzero.idea.findbugs">
     <option name="_basePreferences">
