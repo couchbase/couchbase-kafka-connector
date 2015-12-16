@@ -70,6 +70,8 @@ public class JsonEncoder extends AbstractEncoder {
                 message.put("flags", mutation.flags());
                 message.put("cas", mutation.cas());
                 message.put("lockTime", mutation.lockTime());
+                message.put("bySeqno", mutation.bySequenceNumber());
+                message.put("revSeqno", mutation.revisionSequenceNumber());
                 try {
                     message.set("content", MAPPER.readTree(mutation.content().toString(CharsetUtil.UTF_8)));
                 } catch (JsonParseException e) {
@@ -80,6 +82,8 @@ public class JsonEncoder extends AbstractEncoder {
                 message.put("event", "removal");
                 message.put("key", mutation.key());
                 message.put("cas", mutation.cas());
+                message.put("bySeqno", mutation.bySequenceNumber());
+                message.put("revSeqno", mutation.revisionSequenceNumber());
             }
             return message.toString().getBytes();
         } catch (IOException ex) {
