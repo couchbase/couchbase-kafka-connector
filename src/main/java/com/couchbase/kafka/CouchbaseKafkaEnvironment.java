@@ -58,6 +58,13 @@ public interface CouchbaseKafkaEnvironment extends CoreEnvironment {
     String couchbaseStateSerializerClass();
 
     /**
+     * Minimum time between dumping the state
+     *
+     * @return time in milliseconds
+     */
+    long couchbaseStateSerializationThreshold();
+
+    /**
      * List of Couchbase nodes used to connect.
      *
      * @return list of node addresses

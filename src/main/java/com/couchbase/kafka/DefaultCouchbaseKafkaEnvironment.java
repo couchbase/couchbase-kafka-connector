@@ -44,6 +44,7 @@ public class DefaultCouchbaseKafkaEnvironment extends DefaultCoreEnvironment imp
     private static final String KAFKA_ZOOKEEPER_ADDRESS = "127.0.0.1:2181";
     private static final String KAFKA_TOPIC = "default";
     private static final String COUCHBASE_STATE_SERIALIZER_CLASS = "com.couchbase.kafka.state.ZookeeperStateSerializer";
+    private static final long COUCHBASE_STATE_SERIALIZATION_THRESHOLD = 2;
     private static final String COUCHBASE_BUCKET = "default";
     private static final String COUCHBASE_PASSWORD = "";
     private static final String COUCHBASE_NODE = "127.0.0.1";
@@ -56,6 +57,7 @@ public class DefaultCouchbaseKafkaEnvironment extends DefaultCoreEnvironment imp
     private String kafkaTopic;
     private String kafkaZookeeperAddress;
     private String couchbaseStateSerializerClass;
+    private long couchbaseStateSerializationThreshold;
     private String couchbasePassword;
     private String couchbaseBucket;
     private List<String> couchbaseNodes;
@@ -137,6 +139,7 @@ public class DefaultCouchbaseKafkaEnvironment extends DefaultCoreEnvironment imp
         kafkaTopic = stringPropertyOr("kafka.topic", builder.kafkaTopic);
         kafkaZookeeperAddress = stringPropertyOr("kafka.zookeeperAddress", builder.kafkaZookeeperAddress);
         couchbaseStateSerializerClass = stringPropertyOr("couchbaseStateSerializerClass", builder.couchbaseStateSerializerClass);
+        couchbaseStateSerializationThreshold = longPropertyOr("couchbaseStateSerializationThreshold", builder.couchbaseStateSerializationThreshold);
         couchbaseNodes = stringListPropertyOr("couchbase.nodes", builder.couchbaseNodes);
         couchbaseBucket = stringPropertyOr("couchbase.bucket", builder.couchbaseBucket);
         couchbasePassword = stringPropertyOr("couchbase.password", builder.couchbasePassword);
@@ -173,6 +176,11 @@ public class DefaultCouchbaseKafkaEnvironment extends DefaultCoreEnvironment imp
     }
 
     @Override
+    public long couchbaseStateSerializationThreshold() {
+        return couchbaseStateSerializationThreshold;
+    }
+
+    @Override
     public String couchbaseStateSerializerClass() {
         return couchbaseStateSerializerClass;
     }
@@ -201,17 +209,44 @@ public class DefaultCouchbaseKafkaEnvironment extends DefaultCoreEnvironment imp
         }
     }
 
+    @Override
+    protected StringBuilder dumpParameters(StringBuilder sb) {
+        //first dump core's parameters
+        super.dumpParameters(sb);
+        //dump kafka-connector specific parameters
+        sb.append(", kafkaKeySerializerClass=").append(this.kafkaKeySerializerClass);
+        sb.append(", kafkaFilterClass=").append(this.kafkaFilterClass);
+        sb.append(", kafkaValueSerializerClass=").append(this.kafkaValueSerializerClass);
+        sb.append(", kafkaEventBufferSize=").append(this.kafkaEventBufferSize);
+        sb.append(", kafkaTopic=").append(this.kafkaTopic);
+        sb.append(", kafkaZookeeperAddress=").append(this.kafkaZookeeperAddress);
+        sb.append(", couchbaseStateSerializerClass=").append(this.couchbaseStateSerializerClass);
+        sb.append(", couchbaseStateSerializationThreshold=").append(this.couchbaseStateSerializationThreshold);
+        sb.append(", couchbaseBucket=").append(this.couchbaseBucket);
+        sb.append(", couchbaseNodes=").append(String.join(",", this.couchbaseNodes));
+
+        return sb;
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder("CouchbaseKafkaEnvironment: {");
+        this.dumpParameters(sb).append('}');
+        return sb.toString();
+    }
+
     public static class Builder extends DefaultCoreEnvironment.Builder {
         private String kafkaKeySerializerClass = KAFKA_KEY_SERIALIZER_CLASS;
         private String kafkaValueSerializerClass = KAFKA_VALUE_SERIALIZER_CLASS;
         private int kafkaEventBufferSize = KAFKA_EVENT_BUFFER_SIZE;
         private String kafkaFilterClass = KAFKA_FILTER_CLASS;
-        public String kafkaTopic = KAFKA_TOPIC;
-        public String kafkaZookeeperAddress = KAFKA_ZOOKEEPER_ADDRESS;
-        public String couchbaseStateSerializerClass = COUCHBASE_STATE_SERIALIZER_CLASS;
-        public List<String> couchbaseNodes;
-        public String couchbaseBucket = COUCHBASE_BUCKET;
-        public String couchbasePassword = COUCHBASE_PASSWORD;
+        private String kafkaTopic = KAFKA_TOPIC;
+        private String kafkaZookeeperAddress = KAFKA_ZOOKEEPER_ADDRESS;
+        private String couchbaseStateSerializerClass = COUCHBASE_STATE_SERIALIZER_CLASS;
+        private List<String> couchbaseNodes;
+        private String couchbaseBucket = COUCHBASE_BUCKET;
+        private String couchbasePassword = COUCHBASE_PASSWORD;
+        private long couchbaseStateSerializationThreshold = COUCHBASE_STATE_SERIALIZATION_THRESHOLD;
 
         public Builder() {
             couchbaseNodes = Collections.singletonList(COUCHBASE_NODE);
@@ -249,6 +284,11 @@ public class DefaultCouchbaseKafkaEnvironment extends DefaultCoreEnvironment imp
 
         public Builder couchbaseStateSerializerClass(final String couchbaseStateSerializerClass) {
             this.couchbaseStateSerializerClass = couchbaseStateSerializerClass;
+            return this;
+        }
+
+        public Builder couchbaseStateSerializationThreshold(final long couchbaseStateSerializationThreshold) {
+            this.couchbaseStateSerializationThreshold = couchbaseStateSerializationThreshold;
             return this;
         }
 

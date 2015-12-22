@@ -31,6 +31,8 @@ import com.couchbase.client.core.message.CouchbaseMessage;
 import com.couchbase.client.core.message.cluster.OpenBucketRequest;
 import com.couchbase.client.core.message.cluster.SeedNodesRequest;
 import com.couchbase.client.core.message.dcp.DCPRequest;
+import com.couchbase.client.core.message.dcp.MutationMessage;
+import com.couchbase.client.core.message.dcp.RemoveMessage;
 import com.couchbase.client.core.message.dcp.SnapshotMarkerMessage;
 import com.couchbase.client.core.message.kv.MutationToken;
 import com.couchbase.client.deps.com.lmax.disruptor.EventTranslatorOneArg;
@@ -172,13 +174,32 @@ public class CouchbaseReader {
                             state.put(new BucketStreamState(
                                     snapshotMarker.partition(),
                                     oldState.vbucketUUID(),
-                                    snapshotMarker.endSequenceNumber(),
+                                    snapshotMarker.startSequenceNumber(),
                                     oldState.endSequenceNumber(),
-                                    snapshotMarker.endSequenceNumber(),
+                                    snapshotMarker.startSequenceNumber(),
+                                    snapshotMarker.endSequenceNumber()));
+                        } else if (dcpRequest instanceof RemoveMessage) {
+                            RemoveMessage msg = (RemoveMessage) dcpRequest;
+                            final BucketStreamState oldState = state.get(msg.partition());
+                            state.put(new BucketStreamState(
+                                    msg.partition(),
+                                    oldState.vbucketUUID(),
+                                    msg.bySequenceNumber(),
+                                    oldState.endSequenceNumber(),
+                                    Math.max(msg.bySequenceNumber(), oldState.snapshotStartSequenceNumber()),
                                     oldState.snapshotEndSequenceNumber()));
-                        } else {
-                            dcpRingBuffer.tryPublishEvent(TRANSLATOR, dcpRequest);
+                        } else if (dcpRequest instanceof MutationMessage) {
+                            MutationMessage msg = (MutationMessage) dcpRequest;
+                            final BucketStreamState oldState = state.get(msg.partition());
+                            state.put(new BucketStreamState(
+                                    msg.partition(),
+                                    oldState.vbucketUUID(),
+                                    msg.bySequenceNumber(),
+                                    oldState.endSequenceNumber(),
+                                    Math.max(msg.bySequenceNumber(), oldState.snapshotStartSequenceNumber()),
+                                    oldState.snapshotEndSequenceNumber()));
                         }
+                        dcpRingBuffer.tryPublishEvent(TRANSLATOR, dcpRequest);
                     }
                 });
     }
