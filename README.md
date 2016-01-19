@@ -3,7 +3,7 @@
 Welcome to the official Couchbase Kafka connector! It provides functionality to direct a stream of events from Couchbase
 Server to Kafka.
 
-You can read the quickstart guide below or consult the documentation here: http://developer.couchbase.com/documentation/server/4.0/connectors/kafka-1.0/kafka-intro.html
+You can read the quickstart guide below or consult the documentation here: http://developer.couchbase.com/documentation/server/4.1/connectors/kafka-1.2/kafka-intro.html
 
 The issue tracker can be found at [https://issues.couchbase.com/browse/KAFKAC](https://issues.couchbase.com/browse/KAFKAC)
 
