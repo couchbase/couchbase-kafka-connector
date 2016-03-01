@@ -23,7 +23,6 @@
 package com.couchbase.kafka;
 
 import com.couchbase.client.core.ClusterFacade;
-import com.couchbase.client.core.dcp.BucketStreamAggregator;
 import com.couchbase.client.core.dcp.BucketStreamAggregatorState;
 import com.couchbase.client.core.dcp.BucketStreamState;
 import com.couchbase.client.core.dcp.BucketStreamStateUpdatedEvent;
@@ -37,6 +36,7 @@ import com.couchbase.client.core.message.dcp.SnapshotMarkerMessage;
 import com.couchbase.client.core.message.kv.MutationToken;
 import com.couchbase.client.deps.com.lmax.disruptor.EventTranslatorOneArg;
 import com.couchbase.client.deps.com.lmax.disruptor.RingBuffer;
+import com.couchbase.kafka.state.BucketStreamAggregator;
 import com.couchbase.kafka.state.RunMode;
 import com.couchbase.kafka.state.StateSerializer;
 import rx.functions.Action1;
@@ -135,7 +135,8 @@ public class CouchbaseReader {
                 List<MutationToken> tokens = new ArrayList<MutationToken>(aggregatorState.size());
                 for (BucketStreamState streamState : aggregatorState) {
                     tokens.add(new MutationToken(streamState.partition(),
-                            streamState.vbucketUUID(), streamState.startSequenceNumber()));
+                            streamState.vbucketUUID(), streamState.startSequenceNumber(),
+                            bucket));
                 }
                 return tokens.toArray(new MutationToken[tokens.size()]);
             }
