@@ -23,6 +23,7 @@
 package com.couchbase.kafka;
 
 import com.couchbase.client.core.message.CouchbaseMessage;
+import com.couchbase.client.core.message.dcp.DCPMessage;
 import com.couchbase.client.core.message.dcp.MutationMessage;
 
 
@@ -64,9 +65,8 @@ public class DCPEvent {
      * @return the key of message or null.
      */
     public String key() {
-        if (message instanceof MutationMessage) {
-            MutationMessage mutation = (MutationMessage) message;
-            return mutation.key();
+        if (message instanceof DCPMessage) {
+            return ((DCPMessage)message).key();
         } else {
             return null;
         }
