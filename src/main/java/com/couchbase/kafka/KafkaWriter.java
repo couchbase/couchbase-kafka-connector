@@ -22,6 +22,7 @@
 
 package com.couchbase.kafka;
 
+import com.couchbase.client.core.message.dcp.DCPMessage;
 import com.couchbase.client.core.message.dcp.MutationMessage;
 import com.couchbase.client.deps.com.lmax.disruptor.EventHandler;
 import com.couchbase.kafka.filter.Filter;
@@ -69,13 +70,20 @@ public class KafkaWriter implements EventHandler<DCPEvent> {
      */
     @Override
     public void onEvent(final DCPEvent event, final long sequence, final boolean endOfBatch) throws Exception {
-        if (filter.pass(event)) {
-            KeyedMessage<String, DCPEvent> payload =
-                    new KeyedMessage<String, DCPEvent>(topic, event.key(), event);
-            producer.send(payload);
+        try {
+            if (filter.pass(event)) {
+                KeyedMessage<String, DCPEvent> payload =
+                        new KeyedMessage<String, DCPEvent>(topic, event.key(), event);
+                producer.send(payload);
+            }
+        } finally {
             if (event.message() instanceof MutationMessage) {
                 MutationMessage mutation = (MutationMessage) event.message();
                 mutation.content().release();
+            }
+            if (event.message() instanceof DCPMessage) {
+                DCPMessage dcpMessage = (DCPMessage) event.message();
+                dcpMessage.connection().consumed(dcpMessage);
             }
         }
     }
