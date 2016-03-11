@@ -34,7 +34,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.nio.file.Paths;
 
 /**
  * @author Sergey Avseyev
@@ -112,6 +111,6 @@ public class ZookeeperStateSerializer implements StateSerializer {
     }
 
     private String pathForState(final int partition) {
-        return Paths.get("/couchbase-kafka-connector", bucket, Integer.toString(partition)).toString();
+        return String.join("/", "/couchbase-kafka-connector", bucket, Integer.toString(partition));
     }
 }
