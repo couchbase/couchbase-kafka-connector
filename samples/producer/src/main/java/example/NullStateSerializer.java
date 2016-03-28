@@ -22,10 +22,10 @@
 
 package example;
 
-import com.couchbase.client.core.dcp.BucketStreamAggregatorState;
-import com.couchbase.client.core.dcp.BucketStreamState;
 import com.couchbase.kafka.CouchbaseKafkaEnvironment;
+import com.couchbase.kafka.state.ConnectorState;
 import com.couchbase.kafka.state.StateSerializer;
+import com.couchbase.kafka.state.StreamState;
 
 /**
  * @author Sergey Avseyev
@@ -35,24 +35,21 @@ public class NullStateSerializer implements StateSerializer {
     public NullStateSerializer(final CouchbaseKafkaEnvironment environment) {
     }
 
-
     @Override
-    public void dump(BucketStreamAggregatorState aggregatorState) {
-
+    public void dump(ConnectorState connectorState) {
     }
 
     @Override
-    public void dump(BucketStreamAggregatorState aggregatorState, short partition) {
-
+    public void dump(ConnectorState connectorState, short partition) {
     }
 
     @Override
-    public BucketStreamAggregatorState load(BucketStreamAggregatorState aggregatorState) {
-        return new BucketStreamAggregatorState();
+    public ConnectorState load(ConnectorState connectorState) {
+        return new ConnectorState();
     }
 
     @Override
-    public BucketStreamState load(BucketStreamAggregatorState aggregatorState, short partition) {
-        return new BucketStreamState(partition, 0, 0, 0xffffffff, 0, 0xffffffff);
+    public StreamState load(ConnectorState connectorState, short partition) {
+        return new StreamState(partition, 0, 0);
     }
 }
