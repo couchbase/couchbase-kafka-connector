@@ -82,8 +82,7 @@ public class KafkaWriter implements EventHandler<DCPEvent> {
                 mutation.content().release();
             }
             if (event.message() instanceof DCPMessage) {
-                DCPMessage dcpMessage = (DCPMessage) event.message();
-                dcpMessage.connection().consumed(dcpMessage);
+                event.connection().consumed((DCPMessage) event.message());
             }
         }
     }

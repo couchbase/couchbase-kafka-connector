@@ -23,26 +23,35 @@
 package com.couchbase.kafka;
 
 import com.couchbase.client.core.ClusterFacade;
-import com.couchbase.client.core.dcp.BucketStreamAggregator;
-import com.couchbase.client.core.dcp.BucketStreamAggregatorState;
-import com.couchbase.client.core.dcp.BucketStreamState;
-import com.couchbase.client.core.dcp.BucketStreamStateUpdatedEvent;
+import com.couchbase.client.core.endpoint.dcp.DCPConnection;
+import com.couchbase.client.core.logging.CouchbaseLogger;
+import com.couchbase.client.core.logging.CouchbaseLoggerFactory;
 import com.couchbase.client.core.message.CouchbaseMessage;
+import com.couchbase.client.core.message.ResponseStatus;
 import com.couchbase.client.core.message.cluster.OpenBucketRequest;
+import com.couchbase.client.core.message.cluster.OpenBucketResponse;
 import com.couchbase.client.core.message.cluster.SeedNodesRequest;
+import com.couchbase.client.core.message.cluster.SeedNodesResponse;
 import com.couchbase.client.core.message.dcp.DCPRequest;
 import com.couchbase.client.core.message.dcp.MutationMessage;
+import com.couchbase.client.core.message.dcp.OpenConnectionRequest;
+import com.couchbase.client.core.message.dcp.OpenConnectionResponse;
 import com.couchbase.client.core.message.dcp.RemoveMessage;
 import com.couchbase.client.core.message.dcp.SnapshotMarkerMessage;
 import com.couchbase.client.core.message.kv.MutationToken;
-import com.couchbase.client.deps.com.lmax.disruptor.EventTranslatorOneArg;
+import com.couchbase.client.deps.com.lmax.disruptor.EventTranslatorTwoArg;
 import com.couchbase.client.deps.com.lmax.disruptor.RingBuffer;
-import com.couchbase.kafka.state.RunMode;
+import com.couchbase.kafka.state.ConnectorState;
 import com.couchbase.kafka.state.StateSerializer;
+import com.couchbase.kafka.state.StreamState;
+import com.couchbase.kafka.state.StreamStateUpdatedEvent;
+import rx.Observable;
 import rx.functions.Action1;
+import rx.functions.Action2;
+import rx.functions.Func0;
 import rx.functions.Func1;
 
-import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -52,20 +61,26 @@ import java.util.concurrent.TimeUnit;
  * @author Sergey Avseyev
  */
 public class CouchbaseReader {
-    private static final EventTranslatorOneArg<DCPEvent, CouchbaseMessage> TRANSLATOR =
-            new EventTranslatorOneArg<DCPEvent, CouchbaseMessage>() {
+    private static final CouchbaseLogger LOGGER = CouchbaseLoggerFactory.getInstance(CouchbaseReader.class);
+
+    private static final EventTranslatorTwoArg<DCPEvent, DCPConnection, CouchbaseMessage> TRANSLATOR =
+            new EventTranslatorTwoArg<DCPEvent, DCPConnection, CouchbaseMessage>() {
                 @Override
-                public void translateTo(final DCPEvent event, final long sequence, final CouchbaseMessage message) {
+                public void translateTo(final DCPEvent event, final long sequence,
+                                        final DCPConnection connection, final CouchbaseMessage message) {
                     event.setMessage(message);
+                    event.setConnection(connection);
                 }
             };
+
     private final ClusterFacade core;
     private final RingBuffer<DCPEvent> dcpRingBuffer;
     private final List<String> nodes;
     private final String bucket;
     private final String password;
     private final StateSerializer stateSerializer;
-    private final BucketStreamAggregator aggregator;
+    private final String connectionName;
+    private DCPConnection connection;
 
     /**
      * Creates a new {@link CouchbaseReader}.
@@ -101,7 +116,7 @@ public class CouchbaseReader {
         this.bucket = couchbaseBucket;
         this.password = couchbasePassword;
         this.stateSerializer = stateSerializer;
-        aggregator = new BucketStreamAggregator("CouchbaseKafka(" + this.hashCode() + ")", core, couchbaseBucket);
+        this.connectionName = "CouchbaseKafka(" + this.hashCode() + ")";
     }
 
     /**
@@ -118,89 +133,101 @@ public class CouchbaseReader {
      * @param timeUnit the unit for the timeout.
      */
     public void connect(final long timeout, final TimeUnit timeUnit) {
-        core.send(new SeedNodesRequest(nodes))
+        OpenConnectionResponse response = core
+                .<SeedNodesResponse>send(new SeedNodesRequest(nodes))
+                .flatMap(new Func1<SeedNodesResponse, Observable<OpenBucketResponse>>() {
+                    @Override
+                    public Observable<OpenBucketResponse> call(SeedNodesResponse response) {
+                        return core.send(new OpenBucketRequest(bucket, password));
+                    }
+                })
+                .flatMap(new Func1<OpenBucketResponse, Observable<OpenConnectionResponse>>() {
+                    @Override
+                    public Observable<OpenConnectionResponse> call(OpenBucketResponse response) {
+                        return core.send(new OpenConnectionRequest(connectionName, bucket));
+                    }
+                })
                 .timeout(timeout, timeUnit)
                 .toBlocking()
                 .single();
-        core.send(new OpenBucketRequest(bucket, password))
-                .timeout(timeout, timeUnit)
-                .toBlocking()
-                .single();
+        this.connection = response.connection();
     }
 
-    public MutationToken[] currentSequenceNumbers() {
-        return aggregator.getCurrentState().map(new Func1<BucketStreamAggregatorState, MutationToken[]>() {
-            @Override
-            public MutationToken[] call(BucketStreamAggregatorState aggregatorState) {
-                List<MutationToken> tokens = new ArrayList<MutationToken>(aggregatorState.size());
-                for (BucketStreamState streamState : aggregatorState) {
-                    tokens.add(new MutationToken(streamState.partition(),
-                            streamState.vbucketUUID(), streamState.startSequenceNumber(),
-                            bucket));
-                }
-                return tokens.toArray(new MutationToken[tokens.size()]);
-            }
-        }).toBlocking().first();
+
+    /**
+     * Returns current state of the cluster.
+     *
+     *
+     * @return and object, which contains current sequence number for each partition on the cluster.
+     */
+    public ConnectorState currentState() {
+        return connection.getCurrentState()
+                .collect(new Func0<ConnectorState>() {
+                    @Override
+                    public ConnectorState call() {
+                        return new ConnectorState();
+                    }
+                }, new Action2<ConnectorState, MutationToken>() {
+                    @Override
+                    public void call(ConnectorState connectorState, MutationToken token) {
+                        connectorState.put(new StreamState(token));
+                    }
+                })
+                .toBlocking().single();
     }
 
     /**
      * Executes worker reading loop, which relays events from Couchbase to Kafka.
      *
-     * @param state initial state for the streams
-     * @param mode  the running mode
+     * @param fromState initial state for the streams
+     * @param toState   target state for the streams
      */
-    public void run(final BucketStreamAggregatorState state, final RunMode mode) {
-        if (mode == RunMode.LOAD_AND_RESUME) {
-            stateSerializer.load(state);
+    public void run(final ConnectorState fromState, final ConnectorState toState) {
+        if (!Arrays.equals(fromState.partitions(), toState.partitions())) {
+            throw new IllegalArgumentException("partitions in FROM state do not match partitions in TO state");
         }
-        state.updates().subscribe(
-                new Action1<BucketStreamStateUpdatedEvent>() {
+
+        final ConnectorState connectorState = fromState.clone();
+        connectorState.updates().subscribe(
+                new Action1<StreamStateUpdatedEvent>() {
                     @Override
-                    public void call(BucketStreamStateUpdatedEvent event) {
-                        if (event.partialUpdate()) {
-                            stateSerializer.dump(event.aggregatorState(), event.partitionState().partition());
-                        } else {
-                            stateSerializer.dump(event.aggregatorState());
-                        }
+                    public void call(StreamStateUpdatedEvent event) {
+                            stateSerializer.dump(event.connectorState(), event.partition());
                     }
                 });
-        aggregator.feed(state)
+
+        Observable.from(fromState)
+                .flatMap(new Func1<StreamState, Observable<ResponseStatus>>() {
+                    @Override
+                    public Observable<ResponseStatus> call(StreamState begin) {
+                        StreamState end = toState.get(begin.partition());
+                        return connection.addStream(begin.partition(), begin.vbucketUUID(),
+                                begin.sequenceNumber(), end.sequenceNumber(),
+                                begin.sequenceNumber(), end.sequenceNumber());
+                    }
+                })
+                .toList()
+                .flatMap(new Func1<List<ResponseStatus>, Observable<DCPRequest>>() {
+                    @Override
+                    public Observable<DCPRequest> call(List<ResponseStatus> statuses) {
+                        return connection.subject();
+                    }
+                })
                 .toBlocking()
                 .forEach(new Action1<DCPRequest>() {
                     @Override
                     public void call(final DCPRequest dcpRequest) {
                         if (dcpRequest instanceof SnapshotMarkerMessage) {
                             SnapshotMarkerMessage snapshotMarker = (SnapshotMarkerMessage) dcpRequest;
-                            final BucketStreamState oldState = state.get(snapshotMarker.partition());
-                            state.put(new BucketStreamState(
-                                    snapshotMarker.partition(),
-                                    oldState.vbucketUUID(),
-                                    snapshotMarker.startSequenceNumber(),
-                                    oldState.endSequenceNumber(),
-                                    snapshotMarker.startSequenceNumber(),
-                                    snapshotMarker.endSequenceNumber()));
+                            connectorState.update(snapshotMarker.partition(), snapshotMarker.endSequenceNumber());
                         } else if (dcpRequest instanceof RemoveMessage) {
                             RemoveMessage msg = (RemoveMessage) dcpRequest;
-                            final BucketStreamState oldState = state.get(msg.partition());
-                            state.put(new BucketStreamState(
-                                    msg.partition(),
-                                    oldState.vbucketUUID(),
-                                    msg.bySequenceNumber(),
-                                    oldState.endSequenceNumber(),
-                                    Math.max(msg.bySequenceNumber(), oldState.snapshotStartSequenceNumber()),
-                                    oldState.snapshotEndSequenceNumber()));
+                            connectorState.update(msg.partition(), msg.bySequenceNumber());
                         } else if (dcpRequest instanceof MutationMessage) {
                             MutationMessage msg = (MutationMessage) dcpRequest;
-                            final BucketStreamState oldState = state.get(msg.partition());
-                            state.put(new BucketStreamState(
-                                    msg.partition(),
-                                    oldState.vbucketUUID(),
-                                    msg.bySequenceNumber(),
-                                    oldState.endSequenceNumber(),
-                                    Math.max(msg.bySequenceNumber(), oldState.snapshotStartSequenceNumber()),
-                                    oldState.snapshotEndSequenceNumber()));
+                            connectorState.update(msg.partition(), msg.bySequenceNumber());
                         }
-                        dcpRingBuffer.tryPublishEvent(TRANSLATOR, dcpRequest);
+                        dcpRingBuffer.tryPublishEvent(TRANSLATOR, connection, dcpRequest);
                     }
                 });
     }

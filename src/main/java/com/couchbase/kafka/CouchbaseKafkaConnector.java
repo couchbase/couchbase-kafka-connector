@@ -24,18 +24,16 @@ package com.couchbase.kafka;
 
 import com.couchbase.client.core.ClusterFacade;
 import com.couchbase.client.core.CouchbaseCore;
-import com.couchbase.client.core.dcp.BucketStreamAggregatorState;
-import com.couchbase.client.core.dcp.BucketStreamState;
 import com.couchbase.client.core.logging.CouchbaseLogger;
 import com.couchbase.client.core.logging.CouchbaseLoggerFactory;
-import com.couchbase.client.core.message.kv.MutationToken;
 import com.couchbase.client.deps.com.lmax.disruptor.ExceptionHandler;
 import com.couchbase.client.deps.com.lmax.disruptor.RingBuffer;
 import com.couchbase.client.deps.com.lmax.disruptor.dsl.Disruptor;
 import com.couchbase.client.deps.io.netty.util.concurrent.DefaultThreadFactory;
 import com.couchbase.kafka.filter.Filter;
-import com.couchbase.kafka.state.RunMode;
+import com.couchbase.kafka.state.ConnectorState;
 import com.couchbase.kafka.state.StateSerializer;
+import com.couchbase.kafka.state.StreamState;
 import kafka.cluster.Broker;
 import kafka.javaapi.producer.Producer;
 import kafka.producer.ProducerConfig;
@@ -44,6 +42,7 @@ import kafka.utils.ZkUtils;
 import org.I0Itec.zkclient.ZkClient;
 import scala.collection.Iterator;
 
+import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -104,17 +103,27 @@ public class CouchbaseKafkaConnector implements Runnable {
                                     final String kafkaZookeeper, final String kafkaTopic, final CouchbaseKafkaEnvironment environment) {
         try {
             filter = (Filter) Class.forName(environment.kafkaFilterClass()).newInstance();
-        } catch (ReflectiveOperationException e) {
-            throw new IllegalArgumentException("Cannot initialize filter class:" +
-                    environment.kafkaFilterClass(), e);
+        } catch (InstantiationException e) {
+            throw new IllegalArgumentException("Cannot initialize filter class:" + environment.kafkaFilterClass(), e);
+        } catch (IllegalAccessException e) {
+            throw new IllegalArgumentException("Cannot initialize filter class:" + environment.kafkaFilterClass(), e);
+        } catch (ClassNotFoundException e) {
+            throw new IllegalArgumentException("Cannot initialize filter class:" + environment.kafkaFilterClass(), e);
         }
         try {
             stateSerializer = (StateSerializer) Class.forName(environment.couchbaseStateSerializerClass())
                     .getDeclaredConstructor(CouchbaseKafkaEnvironment.class)
                     .newInstance(environment);
-        } catch (ReflectiveOperationException e) {
-            throw new IllegalArgumentException("Cannot initialize state serializer class: " +
-                    environment.couchbaseStateSerializerClass(), e);
+        } catch (NoSuchMethodException e) {
+            throw new IllegalArgumentException("Cannot initialize serializer class:" + environment.kafkaFilterClass(), e);
+        } catch (InvocationTargetException e) {
+            throw new IllegalArgumentException("Cannot initialize serializer class:" + environment.kafkaFilterClass(), e);
+        } catch (InstantiationException e) {
+            throw new IllegalArgumentException("Cannot initialize serializer class:" + environment.kafkaFilterClass(), e);
+        } catch (IllegalAccessException e) {
+            throw new IllegalArgumentException("Cannot initialize serializer class:" + environment.kafkaFilterClass(), e);
+        } catch (ClassNotFoundException e) {
+            throw new IllegalArgumentException("Cannot initialize serializer class:" + environment.kafkaFilterClass(), e);
         }
         this.environment = environment;
 
@@ -230,45 +239,55 @@ public class CouchbaseKafkaConnector implements Runnable {
     }
 
     /**
-     * Returns current sequence numbers for each partition.
+     * Initialize connector state for given partitions with current vbucketUUID and sequence number.
      *
+     * @param partitions list of partitions related to the state.
      * @return the list of the objects representing sequence numbers
      */
-    public MutationToken[] currentSequenceNumbers() {
-        return couchbaseReader.currentSequenceNumbers();
+    public ConnectorState currentState(int... partitions) {
+        ConnectorState currentState = couchbaseReader.currentState();
+        if (partitions.length == 0) {
+            return currentState;
+        }
+        ConnectorState state = new ConnectorState();
+        for (int partition : partitions) {
+            state.put(currentState.get((short) partition));
+        }
+        return state;
     }
 
     /**
-     * Builds {@link BucketStreamAggregatorState} using current state of the bucket.
+     * Initialize connector state for given partitions with current vbucketUUID and zero sequence number.
      *
-     * @param direction defines the range which should be defined. The current state
-     *                  of the streams is pivot, Direction.TO_CURRENT will represent
-     *                  all changes happened before current state, and Direction.FROM_CURRENT
-     *                  represents changes that will happen in the future.
-     * @return BucketStreamAggregatorState
+     * Useful to stream from  or till current point of time.
+     *
+     * @param partitions list of partitions related to the state.
+     * @return the list of the objects representing sequence numbers
      */
-    public BucketStreamAggregatorState buildState(final Direction direction) {
-        MutationToken[] tokens = currentSequenceNumbers();
-        BucketStreamAggregatorState state = new BucketStreamAggregatorState();
-        for (MutationToken token : tokens) {
-            long start = 0, end = 0;
-            switch (direction) {
-                case TO_CURRENT:
-                    start = 0;
-                    end = token.sequenceNumber();
-                    break;
-                case FROM_CURRENT:
-                    start = token.sequenceNumber();
-                    end = 0xffffffff;
-                    break;
-                case EVERYTHING:
-                    start = 0;
-                    end = 0xffffffff;
-                    break;
-            }
-            state.put(new BucketStreamState((short) token.vbucketID(), token.vbucketUUID(), start, end, start, end));
-        }
-        return state;
+    public ConnectorState startState(int... partitions) {
+        return overrideSequenceNumber(currentState(partitions), 0);
+    }
+
+    /**
+     * Initialize connector state for given partitions with current vbucketUUID and maximum sequence number.
+     *
+     * Represents infinity for upper boundary.
+     *
+     * @param partitions list of partitions related to the state.
+     * @return the list of the objects representing sequence numbers
+     */
+    public ConnectorState endState(int... partitions) {
+        return overrideSequenceNumber(currentState(partitions), 0xffffffff);
+    }
+
+    /**
+     * Initialize connector state for given partitions using configured serializer.
+     *
+     * @param partitions list of partitions related to the state.
+     * @return the list of the objects representing sequence numbers
+     */
+    public ConnectorState loadState(int... partitions) {
+        return stateSerializer.load(startState(partitions));
     }
 
     /**
@@ -276,15 +295,11 @@ public class CouchbaseKafkaConnector implements Runnable {
      */
     @Override
     public void run() {
-        run(RunMode.LOAD_AND_RESUME);
+        run(startState(), endState());
     }
 
-    public void run(RunMode mode) {
-        run(buildState(Direction.EVERYTHING), mode);
-    }
-
-    public void run(final BucketStreamAggregatorState state, final RunMode mode) {
-        couchbaseReader.run(state, mode);
+    public void run(final ConnectorState fromState, final ConnectorState toState) {
+        couchbaseReader.run(fromState, toState);
     }
 
     private String joinNodes(final List<String> list) {
@@ -299,5 +314,13 @@ public class CouchbaseKafkaConnector implements Runnable {
             sb.append(item);
         }
         return sb.toString();
+    }
+
+    private ConnectorState overrideSequenceNumber(ConnectorState connectorState, long sequenceNumber) {
+        ConnectorState state = new ConnectorState();
+        for (StreamState streamState : connectorState) {
+            state.put(new StreamState(streamState.partition(), streamState.vbucketUUID(), sequenceNumber));
+        }
+        return state;
     }
 }

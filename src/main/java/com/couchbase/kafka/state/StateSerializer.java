@@ -1,17 +1,14 @@
 package com.couchbase.kafka.state;
 
-import com.couchbase.client.core.dcp.BucketStreamAggregatorState;
-import com.couchbase.client.core.dcp.BucketStreamState;
-
 /**
  * @author Sergey Avseyev
  */
 public interface StateSerializer {
-    void dump(BucketStreamAggregatorState aggregatorState);
+    void dump(ConnectorState connectorState);
 
-    void dump(BucketStreamAggregatorState aggregatorState, short partition);
+    void dump(ConnectorState connectorState, short partition);
 
-    BucketStreamAggregatorState load(BucketStreamAggregatorState aggregatorState);
+    ConnectorState load(ConnectorState connectorState);
 
-    BucketStreamState load(BucketStreamAggregatorState aggregatorState, short partition);
+    StreamState load(ConnectorState connectorState, short partition);
 }

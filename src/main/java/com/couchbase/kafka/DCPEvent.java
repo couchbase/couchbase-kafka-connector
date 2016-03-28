@@ -22,9 +22,9 @@
 
 package com.couchbase.kafka;
 
+import com.couchbase.client.core.endpoint.dcp.DCPConnection;
 import com.couchbase.client.core.message.CouchbaseMessage;
 import com.couchbase.client.core.message.dcp.DCPMessage;
-import com.couchbase.client.core.message.dcp.MutationMessage;
 
 
 /**
@@ -40,6 +40,11 @@ public class DCPEvent {
     private CouchbaseMessage message;
 
     /**
+     * DCP connection instance
+     */
+    private DCPConnection connection;
+
+    /**
      * Set the new message as a payload for this event.
      *
      * @param message the message to override.
@@ -51,7 +56,7 @@ public class DCPEvent {
     }
 
     /**
-     * Get the mesage from the payload.
+     * Get the message from the payload.
      *
      * @return the actual message.
      */
@@ -59,6 +64,19 @@ public class DCPEvent {
         return message;
     }
 
+
+    public void setConnection(DCPConnection connection) {
+        this.connection = connection;
+    }
+
+    /**
+     * Get the associated DCP connection object.
+     *
+     * @return connection.
+     */
+    public DCPConnection connection() {
+        return connection;
+    }
     /**
      * Extract key from the payload.
      *
