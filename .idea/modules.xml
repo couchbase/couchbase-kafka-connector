@@ -2,7 +2,9 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/couchbase-kafka-connector.iml" filepath="$PROJECT_DIR$/couchbase-kafka-connector.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/couchbase-kafka-connector.iml" filepath="$PROJECT_DIR$/.idea/modules/couchbase-kafka-connector.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/couchbase-kafka-connector_main.iml" filepath="$PROJECT_DIR$/.idea/modules/couchbase-kafka-connector_main.iml" group="couchbase-kafka-connector" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/couchbase-kafka-connector_test.iml" filepath="$PROJECT_DIR$/.idea/modules/couchbase-kafka-connector_test.iml" group="couchbase-kafka-connector" />
     </modules>
   </component>
 </project>

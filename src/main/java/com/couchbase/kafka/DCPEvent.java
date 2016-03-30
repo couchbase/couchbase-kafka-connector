@@ -77,6 +77,7 @@ public class DCPEvent {
     public DCPConnection connection() {
         return connection;
     }
+
     /**
      * Extract key from the payload.
      *
@@ -84,7 +85,7 @@ public class DCPEvent {
      */
     public String key() {
         if (message instanceof DCPMessage) {
-            return ((DCPMessage)message).key();
+            return ((DCPMessage) message).key();
         } else {
             return null;
         }

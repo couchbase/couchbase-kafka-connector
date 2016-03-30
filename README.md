@@ -3,7 +3,7 @@
 Welcome to the official Couchbase Kafka connector! It provides functionality to direct a stream of events from Couchbase
 Server to Kafka.
 
-You can read the quickstart guide below or consult the documentation here: http://developer.couchbase.com/documentation/server/4.1/connectors/kafka-1.2/kafka-intro.html
+You can read the quickstart guide below or consult the documentation here: http://developer.couchbase.com/documentation/server/4.1/connectors/kafka-2.0/kafka-intro.html
 
 The issue tracker can be found at [https://issues.couchbase.com/browse/KAFKAC](https://issues.couchbase.com/browse/KAFKAC)
 
@@ -21,7 +21,7 @@ repositories {
 }
 
 dependencies {
-    compile(group: 'com.couchbase.client', name: 'kafka-connector', version: '1.0.0-dp1')
+    compile(group: 'com.couchbase.client', name: 'kafka-connector', version: '2.0.0')
 }
 ```
 
@@ -95,12 +95,12 @@ public class Example {
 ```
 
 It is also possible to start with some known state or to watch a limited set of partitions. The example below will stream
-only partition 115 starting from the beginning.
+only partition 115 starting from the beginning (see also `currentState()` and `loadState()` helpers).
 
 ```java
-BucketStreamAggregatorState state = new BucketStreamAggregatorState("test");
-state.put(new BucketStreamState((short)115, 0, 0, 0xffffffff, 0, 0xffffffff));
-connector.run(state, RunMode.RESUME);
+ConnectorState startState = connector.startState(115);
+ConnectorState endState = connector.endState(115);
+connector.run(startState, endState);
 ```
 
 The `couchbase1.vagrant` and `kafka1.vagrant` addresses above are the locations of Couchbase Server and Kafka respectively,

@@ -19,5 +19,9 @@
         <processorPath useClasspath="true" />
       </profile>
     </annotationProcessing>
+    <bytecodeTargetLevel>
+      <module name="couchbase-kafka-connector_main" target="1.7" />
+      <module name="couchbase-kafka-connector_test" target="1.7" />
+    </bytecodeTargetLevel>
   </component>
 </project>

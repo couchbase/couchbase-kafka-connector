@@ -291,13 +291,19 @@ public class CouchbaseKafkaConnector implements Runnable {
     }
 
     /**
-     * Executes worker reading loop, which relays events from Couchbase to Kafka.
+     * Executes worker reading loop, which relays all events from Couchbase to Kafka.
      */
     @Override
     public void run() {
         run(startState(), endState());
     }
 
+    /**
+     * Executes worker reading loop, which relays events from Couchbase to Kafka in specified range.
+     *
+     * @param fromState starting state
+     * @param toState   finishing state
+     */
     public void run(final ConnectorState fromState, final ConnectorState toState) {
         couchbaseReader.run(fromState, toState);
     }

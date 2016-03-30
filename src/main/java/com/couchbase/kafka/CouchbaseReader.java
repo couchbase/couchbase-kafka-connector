@@ -80,6 +80,7 @@ public class CouchbaseReader {
     private final String password;
     private final StateSerializer stateSerializer;
     private final String connectionName;
+    private final CouchbaseKafkaEnvironment environment;
     private DCPConnection connection;
 
     /**
@@ -117,6 +118,7 @@ public class CouchbaseReader {
         this.password = couchbasePassword;
         this.stateSerializer = stateSerializer;
         this.connectionName = "CouchbaseKafka(" + this.hashCode() + ")";
+        this.environment = environment;
     }
 
     /**
@@ -157,7 +159,6 @@ public class CouchbaseReader {
     /**
      * Returns current state of the cluster.
      *
-     *
      * @return and object, which contains current sequence number for each partition on the cluster.
      */
     public ConnectorState currentState() {
@@ -192,7 +193,7 @@ public class CouchbaseReader {
                 new Action1<StreamStateUpdatedEvent>() {
                     @Override
                     public void call(StreamStateUpdatedEvent event) {
-                            stateSerializer.dump(event.connectorState(), event.partition());
+                        stateSerializer.dump(event.connectorState(), event.partition());
                     }
                 });
 
@@ -213,6 +214,7 @@ public class CouchbaseReader {
                         return connection.subject();
                     }
                 })
+                .onBackpressureBuffer(environment.kafkaEventBufferSize())
                 .toBlocking()
                 .forEach(new Action1<DCPRequest>() {
                     @Override
@@ -227,7 +229,7 @@ public class CouchbaseReader {
                             MutationMessage msg = (MutationMessage) dcpRequest;
                             connectorState.update(msg.partition(), msg.bySequenceNumber());
                         }
-                        dcpRingBuffer.tryPublishEvent(TRANSLATOR, connection, dcpRequest);
+                        dcpRingBuffer.publishEvent(TRANSLATOR, connection, dcpRequest);
                     }
                 });
     }
