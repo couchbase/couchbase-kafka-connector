@@ -30,6 +30,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Properties;
+import java.util.concurrent.TimeUnit;
 
 /**
  * @author Sergey Avseyev
@@ -48,19 +49,20 @@ public class DefaultCouchbaseKafkaEnvironment extends DefaultCoreEnvironment imp
     private static final String COUCHBASE_BUCKET = "default";
     private static final String COUCHBASE_PASSWORD = "";
     private static final String COUCHBASE_NODE = "127.0.0.1";
-
+    private static final long CONNECT_TIMEOUT = TimeUnit.SECONDS.toMillis(5);
 
     private final String kafkaKeySerializerClass;
     private final String kafkaFilterClass;
     private final String kafkaValueSerializerClass;
     private final int kafkaEventBufferSize;
-    private String kafkaTopic;
-    private String kafkaZookeeperAddress;
-    private String couchbaseStateSerializerClass;
-    private long couchbaseStateSerializationThreshold;
-    private String couchbasePassword;
-    private String couchbaseBucket;
-    private List<String> couchbaseNodes;
+    private final String kafkaTopic;
+    private final String kafkaZookeeperAddress;
+    private final String couchbaseStateSerializerClass;
+    private final long couchbaseStateSerializationThreshold;
+    private final String couchbasePassword;
+    private final String couchbaseBucket;
+    private final List<String> couchbaseNodes;
+    private final long connectTimeout;
 
 
     public static String SDK_PACKAGE_NAME_AND_VERSION = "couchbase-kafka-connector";
@@ -143,6 +145,7 @@ public class DefaultCouchbaseKafkaEnvironment extends DefaultCoreEnvironment imp
         couchbaseNodes = stringListPropertyOr("couchbase.nodes", builder.couchbaseNodes);
         couchbaseBucket = stringPropertyOr("couchbase.bucket", builder.couchbaseBucket);
         couchbasePassword = stringPropertyOr("couchbase.password", builder.couchbasePassword);
+        connectTimeout = longPropertyOr("connectTimeout", builder.connectTimeout);
     }
 
     @Override
@@ -173,6 +176,11 @@ public class DefaultCouchbaseKafkaEnvironment extends DefaultCoreEnvironment imp
     @Override
     public String kafkaTopic() {
         return kafkaTopic;
+    }
+
+    @Override
+    public long connectTimeout() {
+        return connectTimeout;
     }
 
     @Override
@@ -254,6 +262,7 @@ public class DefaultCouchbaseKafkaEnvironment extends DefaultCoreEnvironment imp
         private String couchbaseBucket = COUCHBASE_BUCKET;
         private String couchbasePassword = COUCHBASE_PASSWORD;
         private long couchbaseStateSerializationThreshold = COUCHBASE_STATE_SERIALIZATION_THRESHOLD;
+        private long connectTimeout = CONNECT_TIMEOUT;
 
         public Builder() {
             couchbaseNodes = Collections.singletonList(COUCHBASE_NODE);
@@ -316,6 +325,16 @@ public class DefaultCouchbaseKafkaEnvironment extends DefaultCoreEnvironment imp
 
         public Builder couchbasePassword(final String couchbasePassword) {
             this.couchbasePassword = couchbasePassword;
+            return this;
+        }
+
+        /**
+         * The default timeout for connect operations, set to {@link DefaultCouchbaseKafkaEnvironment#CONNECT_TIMEOUT}.
+         *
+         * @return the default connect timeout.
+         */
+        public Builder connectTimeout(final long connectTimeout) {
+            this.connectTimeout = connectTimeout;
             return this;
         }
 

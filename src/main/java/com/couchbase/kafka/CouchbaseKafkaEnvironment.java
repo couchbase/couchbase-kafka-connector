@@ -98,4 +98,11 @@ public interface CouchbaseKafkaEnvironment extends CoreEnvironment {
      * @return kafka topic name.
      */
     String kafkaTopic();
+
+    /**
+     * The default timeout for connect operations, set to {@link DefaultCouchbaseKafkaEnvironment#CONNECT_TIMEOUT}.
+     *
+     * @return the default connect timeout.
+     */
+    long connectTimeout();
 }

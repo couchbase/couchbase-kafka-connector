@@ -122,10 +122,10 @@ public class CouchbaseReader {
     }
 
     /**
-     * Performs connection with 2 seconds timeout.
+     * Performs connection with default timeout.
      */
     public void connect() {
-        connect(2, TimeUnit.SECONDS);
+        connect(environment.connectTimeout(), TimeUnit.SECONDS);
     }
 
     /**
