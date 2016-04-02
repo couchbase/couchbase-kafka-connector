@@ -223,8 +223,15 @@ public class DefaultCouchbaseKafkaEnvironment extends DefaultCoreEnvironment imp
         sb.append(", couchbaseStateSerializerClass=").append(this.couchbaseStateSerializerClass);
         sb.append(", couchbaseStateSerializationThreshold=").append(this.couchbaseStateSerializationThreshold);
         sb.append(", couchbaseBucket=").append(this.couchbaseBucket);
-        sb.append(", couchbaseNodes=").append(String.join(",", this.couchbaseNodes));
-
+        StringBuilder nodes = new StringBuilder();
+        for (String node:this.couchbaseNodes) {
+            if (nodes.length() == 0) {
+                nodes.append(node);
+            } else {
+                nodes.append("," + node);
+            }
+        }
+        sb.append(", couchbaseNodes=").append(nodes.toString());
         return sb;
     }
 
