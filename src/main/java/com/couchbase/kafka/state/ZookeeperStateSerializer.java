@@ -26,12 +26,16 @@ import com.couchbase.client.deps.com.fasterxml.jackson.databind.JsonNode;
 import com.couchbase.client.deps.com.fasterxml.jackson.databind.ObjectMapper;
 import com.couchbase.client.deps.com.fasterxml.jackson.databind.node.ObjectNode;
 import com.couchbase.kafka.CouchbaseKafkaEnvironment;
+
 import kafka.utils.ZKStringSerializer$;
+
 import org.I0Itec.zkclient.ZkClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * @author Sergey Avseyev
@@ -43,6 +47,7 @@ public class ZookeeperStateSerializer implements StateSerializer {
     private final String bucket;
     private final long stateSerializationThreshold;
     private long updatedAt = 0;
+    private static Set<String> createdPersistentZkNodes = new HashSet<String>();
 
     public ZookeeperStateSerializer(final CouchbaseKafkaEnvironment environment) {
         this.zkClient = new ZkClient(environment.kafkaZookeeperAddress(), 4000, 6000, ZKStringSerializer$.MODULE$);
@@ -106,11 +111,23 @@ public class ZookeeperStateSerializer implements StateSerializer {
         return String.format("/couchbase-kafka-connector2/%s/%d", bucket, partition);
     }
 
+    private Boolean isCreatedPersistentZkNode(String path) {
+    	return createdPersistentZkNodes.contains(path);
+    }
+    
+    private void addCreatedPersistentZkNode(String path) {
+    	createdPersistentZkNodes.add(path);
+    }
+    
     private void writeState(final StreamState streamState) {
         ObjectNode json = MAPPER.createObjectNode();
         json.put("vbucketUUID", streamState.vbucketUUID());
         json.put("sequenceNumber", streamState.sequenceNumber());
-        zkClient.createPersistent(pathForState(streamState.partition()), true);
+        String path = pathForState(streamState.partition());
+        if (isCreatedPersistentZkNode(path) == false) {
+            	zkClient.createPersistent(pathForState(streamState.partition()), true);
+            	addCreatedPersistentZkNode(path);
+        }
         zkClient.writeData(pathForState(streamState.partition()), json.toString());
     }
 }
