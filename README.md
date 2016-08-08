@@ -21,7 +21,7 @@ repositories {
 }
 
 dependencies {
-    compile(group: 'com.couchbase.client', name: 'kafka-connector', version: '2.0.0')
+    compile(group: 'com.couchbase.client', name: 'kafka-connector', version: '2.0.1')
 }
 ```
 
