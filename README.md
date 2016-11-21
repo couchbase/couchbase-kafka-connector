@@ -5,7 +5,7 @@ Server to Kafka.
 
 You can read the quickstart guide below or consult the documentation here: http://developer.couchbase.com/documentation/server/4.1/connectors/kafka-2.0/kafka-intro.html
 
-The issue tracker can be found at [https://issues.couchbase.com/browse/KAFKAC](https://issues.couchbase.com/browse/KAFKAC)
+The issue tracker can be found at [https://issues.couchbase.com/browse/KAFKAC](https://issues.couchbase.com/browse/KAFKAC).
 
 ## Quickstart
 
