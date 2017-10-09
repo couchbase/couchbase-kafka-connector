@@ -1,3 +1,9 @@
+# This project is obsolete
+
+This project is superseded by [kafka-connect-couchbase](https://github.com/couchbase/kafka-connect-couchbase)
+which integrates with the Kafka Connect framework.
+
+
 # Couchbase Kafka Connector
 
 Welcome to the official Couchbase Kafka connector! It provides functionality to direct a stream of events from Couchbase
