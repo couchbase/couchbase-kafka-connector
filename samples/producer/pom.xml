@@ -29,7 +29,7 @@
         <repository>
             <id>couchbase</id>
             <name>couchbase repo</name>
-            <url>http://files.couchbase.com/maven2</url>
+            <url>https://files.couchbase.com/maven2</url>
             <snapshots><enabled>false</enabled></snapshots>
         </repository>
     </repositories>
